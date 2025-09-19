@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carrier Performance & Quote Routing Dashboard - Live Data</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <title>Ed Zahnle - Trucking Insurance Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -14,366 +13,386 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background-color: #f8f9fa;
-            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
         
         .container {
-            padding: 20px;
             max-width: 1400px;
             margin: 0 auto;
         }
         
         .header {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
         }
         
         .header h1 {
             color: #2c3e50;
-            font-size: 24px;
-            margin-bottom: 5px;
+            font-size: 32px;
+            margin-bottom: 10px;
         }
         
         .header p {
             color: #7f8c8d;
-            margin: 0;
+            font-size: 18px;
+        }
+        
+        .refresh-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #ecf0f1;
         }
         
         .refresh-btn {
-            background: #3498db;
+            background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
-            padding: 10px 20px;
+            padding: 12px 25px;
             border: none;
-            border-radius: 6px;
-            cursor: pointer;
+            border-radius: 8px;
+            font-size: 16px;
             font-weight: 600;
-            transition: background 0.2s;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
         
         .refresh-btn:hover {
-            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
         }
         
         .refresh-btn:disabled {
             background: #bdc3c7;
             cursor: not-allowed;
+            transform: none;
         }
         
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-        }
-        
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            margin-left: 10px;
-            border: 2px solid #3498db;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 6px;
+        .status-message {
+            padding: 15px 20px;
+            border-radius: 8px;
             margin: 20px 0;
-            border: 1px solid #f5c6cb;
+            font-weight: 500;
         }
         
-        .success-message {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
-            border: 1px solid #c3e6cb;
+        .status-loading {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .status-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .status-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
         }
         
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         
         .metric-card {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
         }
         
-        .metric-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
         }
         
         .metric-value {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: bold;
             color: #2c3e50;
+            margin-bottom: 10px;
         }
         
-        .last-updated {
-            font-size: 12px;
+        .metric-label {
             color: #7f8c8d;
-            text-align: right;
-            margin-top: 10px;
+            font-size: 16px;
+            font-weight: 500;
         }
         
         .dashboard-content {
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
         
         .tab-nav {
-            border-bottom: 1px solid #e9ecef;
-            padding: 0 20px;
-        }
-        
-        .tab-button {
-            padding: 15px 20px;
-            border: none;
-            background: transparent;
-            border-bottom: 3px solid transparent;
-            cursor: pointer;
-            font-weight: normal;
-            color: #7f8c8d;
-        }
-        
-        .tab-button.active {
-            border-bottom-color: #3498db;
-            color: #3498db;
-            font-weight: bold;
-        }
-        
-        .tab-content {
-            padding: 20px;
-        }
-        
-        .filters {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding: 20px;
             background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .filter-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .filter-group select {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e9ecef;
-            border-radius: 4px;
-        }
-        
-        .routing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 15px;
-        }
-        
-        .routing-card {
-            padding: 20px;
-            border-radius: 8px;
-            position: relative;
-            border: 2px solid #e9ecef;
-        }
-        
-        .routing-card.first {
-            background: #e8f5e8;
-            border-color: #27ae60;
-        }
-        
-        .routing-card.second {
-            background: #fff3e0;
-            border-color: #f39c12;
-        }
-        
-        .routing-card.third {
-            background: #e6f3ff;
-            border-color: #3498db;
-        }
-        
-        .routing-badge {
-            position: absolute;
-            top: -10px;
-            left: 15px;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-        }
-        
-        .routing-badge.first { background: #27ae60; }
-        .routing-badge.second { background: #f39c12; }
-        .routing-badge.third { background: #3498db; }
-        .routing-badge.other { background: #7f8c8d; }
-        
-        .carrier-name {
-            margin: 10px 0 10px 0;
-            color: #2c3e50;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .carrier-stats {
-            font-size: 14px;
-            color: #7f8c8d;
-        }
-        
-        .carrier-stats div {
-            margin-bottom: 5px;
-        }
-        
-        .table-container {
+            padding: 0 30px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
             overflow-x: auto;
         }
         
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
+        .tab-button {
+            padding: 20px 25px;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: 500;
+            color: #6c757d;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
         }
         
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border: 1px solid #dee2e6;
+        .tab-button.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            background: white;
         }
         
-        th {
-            background: #f8f9fa;
-            font-weight: bold;
+        .tab-button:hover:not(.active) {
+            color: #495057;
+            background: #e9ecef;
         }
         
-        tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-        
-        .performance-score {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: center;
-        }
-        
-        .score-high {
-            background: #e8f5e8;
-            color: #27ae60;
-        }
-        
-        .score-medium {
-            background: #fff3e0;
-            color: #f39c12;
-        }
-        
-        .score-low {
-            background: #ffe6e6;
-            color: #e74c3c;
-        }
-        
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .status-bound {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .status-declined {
-            background: #f8d7da;
-            color: #721c24;
+        .tab-content {
+            padding: 30px;
+            min-height: 400px;
         }
         
         .hidden {
             display: none;
         }
         
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin: 20px 0;
+        .routing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
         }
         
-        .quick-links {
-            display: flex;
+        .routing-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .routing-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .routing-card.first {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            border-color: #27ae60;
+        }
+        
+        .routing-card.second {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border-color: #f39c12;
+        }
+        
+        .routing-card.third {
+            background: linear-gradient(135deg, #cce5ff, #b3d9ff);
+            border-color: #3498db;
+        }
+        
+        .routing-badge {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+        }
+        
+        .routing-badge.first { background: #27ae60; }
+        .routing-badge.second { background: #f39c12; }
+        .routing-badge.third { background: #3498db; }
+        .routing-badge.other { background: #6c757d; }
+        
+        .carrier-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 15px 0;
+        }
+        
+        .carrier-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-top: 15px;
         }
         
-        .quick-link {
-            background: #6c757d;
-            color: white;
-            padding: 8px 16px;
-            text-decoration: none;
-            border-radius: 4px;
+        .stat-item {
+            background: rgba(255,255,255,0.7);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
             font-size: 12px;
-            transition: background 0.2s;
+            color: #6c757d;
+            margin-top: 5px;
         }
         
-        .quick-link:hover {
-            background: #5a6268;
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
-        .setup-instructions {
+        .data-table th {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .performance-score {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+        
+        .score-high {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .score-medium {
             background: #fff3cd;
-            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .score-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #6c757d;
+            font-size: 18px;
+        }
+        
+        .filters {
+            background: #f8f9fa;
             padding: 20px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
         }
         
-        .setup-instructions h3 {
-            color: #856404;
-            margin-bottom: 10px;
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
         }
         
-        .setup-instructions ol {
-            color: #856404;
-            margin-left: 20px;
+        .filter-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
         }
         
-        .setup-instructions code {
-            background: #f8f9fa;
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-family: monospace;
+        .filter-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .carrier-insights {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .insight-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid #3498db;
+        }
+        
+        .insight-carrier {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .insight-details {
+            font-size: 14px;
+            color: #6c757d;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -381,269 +400,187 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div>
-                <h1>📊 Carrier Performance & Quote Routing Dashboard</h1>
-                <p>Ed Zahnle - Network TruckInsurance Services | Live Google Sheets Data</p>
-            </div>
-            <button class="refresh-btn" onclick="loadDashboardData()" id="refreshBtn">
-                <span id="refreshText">🔄 Refresh Data</span>
-            </button>
-        </div>
-
-        <!-- Setup Instructions (show only if no data) -->
-        <div id="setupInstructions" class="setup-instructions hidden">
-            <h3>⚙️ Setup Required</h3>
-            <p>To connect your Google Sheets data to this dashboard:</p>
-            <ol>
-                <li>Copy the Google Apps Script code provided</li>
-                <li>Open <a href="https://script.google.com" target="_blank">Google Apps Script</a></li>
-                <li>Create a new project and paste the code</li>
-                <li>Update the <code>SHEET_ID</code> variable with your Google Sheets ID</li>
-                <li>Update the sheet names to match your actual sheet names</li>
-                <li>Deploy as a web app with "Anyone can access" permissions</li>
-                <li>Update the <code>SCRIPT_URL</code> in this HTML file with your deployment URL</li>
-            </ol>
-        </div>
-
-        <!-- Loading State -->
-        <div id="loadingState" class="loading hidden">
-            <div>🔄 Loading your quote data from Google Sheets...</div>
-        </div>
-
-        <!-- Error State -->
-        <div id="errorState" class="error-message hidden">
-            <strong>❌ Unable to load data.</strong> <span id="errorMessage"></span>
-            <div class="quick-links">
-                <a href="#" class="quick-link" onclick="loadDashboardData(); return false;">🔄 Try Again</a>
-                <a href="https://docs.google.com/spreadsheets" class="quick-link" target="_blank">📊 Open Google Sheets</a>
-                <a href="https://script.google.com" class="quick-link" target="_blank">⚙️ Google Apps Script</a>
+            <h1>Ed Zahnle - Trucking Insurance Analytics</h1>
+            <p>Real-time carrier performance and quote routing optimization</p>
+            
+            <div class="refresh-section">
+                <div id="last-updated" style="color: #6c757d;">Never updated</div>
+                <button class="refresh-btn" onclick="loadData()" id="refresh-btn">
+                    Refresh Data
+                </button>
             </div>
         </div>
 
-        <!-- Success Message -->
-        <div id="successMessage" class="success-message hidden">
-            <strong>✅ Data loaded successfully!</strong> <span id="dataDetails"></span>
+        <!-- Status Messages -->
+        <div id="status-container"></div>
+
+        <!-- Metrics -->
+        <div class="metrics-grid" id="metrics-grid" style="display: none;">
+            <div class="metric-card">
+                <div class="metric-icon">📋</div>
+                <div class="metric-value" id="total-quotes">0</div>
+                <div class="metric-label">Total Quotes</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon">✅</div>
+                <div class="metric-value" id="bound-quotes">0</div>
+                <div class="metric-label">Bound Policies</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon">📈</div>
+                <div class="metric-value" id="success-rate">0%</div>
+                <div class="metric-label">Success Rate</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon">🏆</div>
+                <div class="metric-value" id="top-carrier">-</div>
+                <div class="metric-label">Top Carrier</div>
+            </div>
         </div>
 
-        <!-- Main Dashboard -->
-        <div id="dashboardMain" class="hidden">
-            <!-- Key Metrics -->
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <h3 style="color: #3498db;">📋 Total Quotes</h3>
-                    <div class="metric-value" id="totalSubmissions">0</div>
-                    <div class="last-updated" id="lastUpdated">Never updated</div>
-                </div>
-                <div class="metric-card">
-                    <h3 style="color: #27ae60;">✅ Bound Policies</h3>
-                    <div class="metric-value" id="boundPolicies">0</div>
-                </div>
-                <div class="metric-card">
-                    <h3 style="color: #e67e22;">🏆 Top Carrier</h3>
-                    <div class="metric-value" style="font-size: 18px;" id="topCarrier">Loading...</div>
-                </div>
-                <div class="metric-card">
-                    <h3 style="color: #8e44ad;">📈 Success Rate</h3>
-                    <div class="metric-value" style="font-size: 24px;" id="successRate">0%</div>
-                </div>
+        <!-- Dashboard Content -->
+        <div class="dashboard-content" id="dashboard-content" style="display: none;">
+            <div class="tab-nav">
+                <button class="tab-button active" onclick="showTab('routing')">Smart Routing</button>
+                <button class="tab-button" onclick="showTab('performance')">Carrier Performance</button>
+                <button class="tab-button" onclick="showTab('analysis')">Operation Analysis</button>
+                <button class="tab-button" onclick="showTab('submissions')">Recent Submissions</button>
             </div>
 
-            <!-- Dashboard Content -->
-            <div class="dashboard-content">
-                <div class="tab-nav">
-                    <button class="tab-button active" onclick="showTab('routing')">🗺️ Smart Routing</button>
-                    <button class="tab-button" onclick="showTab('carriers')">🏢 Carrier Performance</button>
-                    <button class="tab-button" onclick="showTab('operations')">🚛 Operation Types</button>
-                    <button class="tab-button" onclick="showTab('commodities')">📦 Commodities</button>
-                    <button class="tab-button" onclick="showTab('submissions')">📋 All Submissions</button>
-                </div>
-
-                <!-- Smart Routing Tab -->
-                <div id="routing-tab" class="tab-content">
-                    <h3 style="margin-bottom: 20px; color: #2c3e50;">🎯 Smart Quote Routing Tool</h3>
-                    
-                    <div class="filters">
-                        <div class="filter-group">
-                            <label>Operation Type:</label>
-                            <select id="operationType" onchange="updateRouting()">
-                                <option value="all">All Operation Types</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label>Commodity Type:</label>
-                            <select id="commodityType" onchange="updateRouting()">
-                                <option value="all">All Commodities</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h4 style="color: #2c3e50; margin-bottom: 15px;">📍 Recommended Carrier Routing Order</h4>
-                        <div id="routingRecommendations" class="routing-grid">
-                            <!-- Will be populated by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Carrier Performance Tab -->
-                <div id="carriers-tab" class="tab-content hidden">
-                    <h3 style="margin-bottom: 20px; color: #2c3e50;">🏢 Carrier Performance Analysis</h3>
-                    
-                    <!-- Key Carrier Details -->
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <h4 style="color: #2c3e50; margin-bottom: 15px;">📋 Key Carrier Information</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
-                            <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #27ae60;">
-                                <div style="font-weight: bold; color: #27ae60;">Progressive Commercial</div>
-                                <div style="font-size: 14px; color: #7f8c8d; margin-top: 5px;">
-                                    🎯 CA dump trucks - AUTOMATIC first choice<br>
-                                    📞 Agent codes: 36046 or 66929<br>
-                                    ⚠️ WON'T DO UIIA - important restriction
-                                </div>
+            <!-- Smart Routing Tab -->
+            <div id="routing-tab" class="tab-content">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">Smart Carrier Routing</h2>
+                
+                <div class="carrier-insights">
+                    <h3 style="color: #27ae60; margin-bottom: 10px;">Key Carrier Information</h3>
+                    <div class="insights-grid">
+                        <div class="insight-card">
+                            <div class="insight-carrier">Progressive Commercial</div>
+                            <div class="insight-details">
+                                • CA dump trucks - AUTOMATIC first choice<br>
+                                • Agent codes: 36046 or 66929<br>
+                                • WON'T DO UIIA containers
                             </div>
-                            <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
-                                <div style="font-weight: bold; color: #3498db;">Sentry Select</div>
-                                <div style="font-size: 14px; color: #7f8c8d; margin-top: 5px;">
-                                    📞 800-742-5681 for payments<br>
-                                    ✅ Will do UIIA<br>
-                                    ⚠️ Avoids Long Beach, LA, NJ ports
-                                </div>
+                        </div>
+                        <div class="insight-card">
+                            <div class="insight-carrier">Sentry Select</div>
+                            <div class="insight-details">
+                                • Payment: 800-742-5681<br>
+                                • Will do UIIA containers<br>
+                                • Avoids Long Beach/LA/NJ ports
                             </div>
-                            <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #f39c12;">
-                                <div style="font-weight: bold; color: #f39c12;">Bellingham</div>
-                                <div style="font-size: 14px; color: #7f8c8d; margin-top: 5px;">
-                                    📞 Nicole Direct Line: 360-922-5244<br>
-                                    🗺️ 250+ mile radius capability<br>
-                                    📄 Requires full docs package
-                                </div>
+                        </div>
+                        <div class="insight-card">
+                            <div class="insight-carrier">Bellingham</div>
+                            <div class="insight-details">
+                                • Nicole Direct: 360-922-5244<br>
+                                • 250+ mile radius capability<br>
+                                • Requires full docs package
                             </div>
-                            <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #9b59b6;">
-                                <div style="font-weight: bold; color: #9b59b6;">IAT</div>
-                                <div style="font-size: 14px; color: #7f8c8d; margin-top: 5px;">
-                                    🚛 Fleet specialist - multiple units<br>
-                                    🎯 Go-to for 8+ truck operations<br>
-                                    📊 Strong long haul appetite
-                                </div>
+                        </div>
+                        <div class="insight-card">
+                            <div class="insight-carrier">IAT Insurance</div>
+                            <div class="insight-details">
+                                • Fleet specialist (8+ trucks)<br>
+                                • Strong long haul appetite<br>
+                                • Multiple unit operations
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="table-container">
-                        <table id="carrierTable">
-                            <thead>
-                                <tr>
-                                    <th>Carrier</th>
-                                    <th>Submitted</th>
-                                    <th>Quoted</th>
-                                    <th>Won</th>
-                                    <th>Quote Rate</th>
-                                    <th>Win Rate</th>
-                                    <th>Avg Premium</th>
-                                    <th>Performance Score</th>
-                                </tr>
-                            </thead>
-                            <tbody id="carrierTableBody">
-                                <!-- Will be populated by JavaScript -->
-                            </tbody>
-                        </table>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Operation Type:</label>
+                        <select id="operation-filter" onchange="updateRouting()">
+                            <option value="all">All Operation Types</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Commodity Type:</label>
+                        <select id="commodity-filter" onchange="updateRouting()">
+                            <option value="all">All Commodities</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Operations Tab -->
-                <div id="operations-tab" class="tab-content hidden">
-                    <h3 style="margin-bottom: 20px; color: #2c3e50;">🚛 Operation Type Performance</h3>
-                    <div id="operationsContent">
-                        <!-- Will be populated by JavaScript -->
-                    </div>
-                </div>
+                <h3 style="color: #2c3e50; margin-bottom: 15px;">Recommended Carrier Order</h3>
+                <div id="routing-recommendations" class="routing-grid"></div>
+            </div>
 
-                <!-- Commodities Tab -->
-                <div id="commodities-tab" class="tab-content hidden">
-                    <h3 style="margin-bottom: 20px; color: #2c3e50;">📦 Commodity Type Analysis</h3>
-                    <div class="table-container">
-                        <table id="commodityTable">
-                            <thead>
-                                <tr>
-                                    <th>Commodity</th>
-                                    <th>Submissions</th>
-                                    <th>Bound</th>
-                                    <th>Bind Rate</th>
-                                    <th>Avg Premium</th>
-                                    <th>Best Carrier</th>
-                                </tr>
-                            </thead>
-                            <tbody id="commodityTableBody">
-                                <!-- Will be populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <!-- Carrier Performance Tab -->
+            <div id="performance-tab" class="tab-content hidden">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">Carrier Performance Analysis</h2>
+                <table class="data-table" id="carrier-table">
+                    <thead>
+                        <tr>
+                            <th>Carrier Name</th>
+                            <th>Submitted</th>
+                            <th>Quoted</th>
+                            <th>Won</th>
+                            <th>Quote Rate</th>
+                            <th>Win Rate</th>
+                            <th>Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="carrier-table-body"></tbody>
+                </table>
+            </div>
 
-                <!-- Submissions Tab -->
-                <div id="submissions-tab" class="tab-content hidden">
-                    <h3 style="margin-bottom: 20px; color: #2c3e50;">📋 Recent Quote Submissions</h3>
-                    <div class="table-container">
-                        <table id="submissionsTable">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Customer</th>
-                                    <th>Operation</th>
-                                    <th>Commodity</th>
-                                    <th>Status</th>
-                                    <th>Quote ID</th>
-                                </tr>
-                            </thead>
-                            <tbody id="submissionsTableBody">
-                                <!-- Will be populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <!-- Analysis Tab -->
+            <div id="analysis-tab" class="tab-content hidden">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">Operation & Commodity Analysis</h2>
+                <div id="analysis-content"></div>
+            </div>
+
+            <!-- Submissions Tab -->
+            <div id="submissions-tab" class="tab-content hidden">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">Recent Quote Submissions</h2>
+                <table class="data-table" id="submissions-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>DOT Number</th>
+                            <th>Operation Type</th>
+                            <th>Commodity</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submissions-table-body"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script>
-        // ✅ CONNECTED: Using your existing Google Apps Script URL
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrt3Axv4G0zLkp27T4Pf9uXPh1JkH2isMudio8G2t3Zd1Sj9FF4ow8ULgJw0YXDg/exec';
+        // Your existing Google Apps Script URL
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrt3Axv4G0zLkp27T4Pf9uXPh1JkH2isMudio8G2t3Zd1Sj9FF4ow8ULgJw0YXDg/exec';
         
         // Global data storage
         let dashboardData = {
             quotes: [],
             carrierAttempts: [],
-            isLoaded: false,
             lastUpdated: null
         };
-        
-        // Initialize dashboard
+
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadDashboardData();
+            loadData();
         });
-        
-        async function loadDashboardData() {
-            const refreshBtn = document.getElementById('refreshBtn');
-            const refreshText = document.getElementById('refreshText');
+
+        async function loadData() {
+            const statusContainer = document.getElementById('status-container');
+            const refreshBtn = document.getElementById('refresh-btn');
             
             try {
                 // Show loading state
                 refreshBtn.disabled = true;
-                refreshText.textContent = '🔄 Loading...';
-                showElement('loadingState');
-                hideElement('errorState');
-                hideElement('successMessage');
-                hideElement('dashboardMain');
-                hideElement('setupInstructions');
+                refreshBtn.textContent = 'Loading...';
+                showStatus('loading', 'Loading data from Google Sheets...');
                 
-                // Fetch data from Google Sheets via Apps Script
-                const response = await fetch(SCRIPT_URL + '?action=getDashboardData&' + Date.now(), {
-                    method: 'GET',
-                    mode: 'cors',
-                    cache: 'no-cache',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
+                // Fetch data
+                const response = await fetch(`${APPS_SCRIPT_URL}?action=getDashboardData&timestamp=${Date.now()}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -655,204 +592,152 @@
                     throw new Error(data.error);
                 }
                 
-                // Store the data
+                // Store data
                 dashboardData.quotes = data.quotes || [];
                 dashboardData.carrierAttempts = data.carrierAttempts || [];
                 dashboardData.lastUpdated = data.lastUpdated || new Date().toISOString();
-                dashboardData.isLoaded = true;
                 
-                // Show success message
-                document.getElementById('dataDetails').textContent = 
-                    `${dashboardData.quotes.length} quotes, ${dashboardData.carrierAttempts.length} carrier attempts`;
-                showElement('successMessage');
-                
-                // Hide loading, show dashboard
-                hideElement('loadingState');
-                showElement('dashboardMain');
-                
-                // Update all dashboard components
+                // Update UI
                 updateMetrics();
                 populateFilters();
-                updateRouting();
+                updateAllTabs();
                 
-                // Auto-hide success message after 3 seconds
-                setTimeout(() => {
-                    hideElement('successMessage');
-                }, 3000);
+                // Show dashboard
+                document.getElementById('metrics-grid').style.display = 'grid';
+                document.getElementById('dashboard-content').style.display = 'block';
+                
+                showStatus('success', `Data loaded successfully! ${dashboardData.quotes.length} quotes, ${dashboardData.carrierAttempts.length} carrier attempts`);
+                
+                // Update last updated time
+                const lastUpdated = new Date(dashboardData.lastUpdated);
+                document.getElementById('last-updated').textContent = 
+                    `Last updated: ${lastUpdated.toLocaleDateString()} at ${lastUpdated.toLocaleTimeString()}`;
                 
             } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                
-                // Show error state
-                hideElement('loadingState');
-                document.getElementById('errorMessage').textContent = error.message;
-                showElement('errorState');
-                
-                // Show setup instructions if it looks like a setup issue
-                if (error.message.includes('Script function not found') || 
-                    error.message.includes('Authorization required') ||
-                    error.message.includes('HTTP 404')) {
-                    showElement('setupInstructions');
-                }
-                
+                console.error('Error loading data:', error);
+                showStatus('error', `Failed to load data: ${error.message}`);
             } finally {
                 refreshBtn.disabled = false;
-                refreshText.textContent = '🔄 Refresh Data';
+                refreshBtn.textContent = 'Refresh Data';
             }
         }
-        
-        function showElement(id) {
-            document.getElementById(id).classList.remove('hidden');
+
+        function showStatus(type, message) {
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = `
+                <div class="status-message status-${type}">
+                    ${message}
+                </div>
+            `;
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusContainer.innerHTML = '';
+                }, 5000);
+            }
         }
-        
-        function hideElement(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
-        
+
         function updateMetrics() {
             const totalQuotes = dashboardData.quotes.length;
-            const boundQuotes = dashboardData.quotes.filter(q => 
-                q.Status === 'Bound'
-            ).length;
+            const boundQuotes = dashboardData.quotes.filter(q => q.Status === 'Bound').length;
             const successRate = totalQuotes > 0 ? ((boundQuotes / totalQuotes) * 100).toFixed(1) : 0;
             
-            // Find top carrier by wins - using your exact column names
+            // Find top carrier
             const carrierWins = {};
             dashboardData.carrierAttempts.forEach(attempt => {
-                const won = attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes';
-                const carrierName = attempt['Carrier Name'];
-                
-                if (won && carrierName) {
-                    carrierWins[carrierName] = (carrierWins[carrierName] || 0) + 1;
+                if ((attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes') && attempt['Carrier Name']) {
+                    carrierWins[attempt['Carrier Name']] = (carrierWins[attempt['Carrier Name']] || 0) + 1;
                 }
             });
             
             const topCarrier = Object.entries(carrierWins)
                 .sort((a, b) => b[1] - a[1])[0]?.[0] || 'No data';
             
-            // Update UI
-            document.getElementById('totalSubmissions').textContent = totalQuotes;
-            document.getElementById('boundPolicies').textContent = boundQuotes;
-            document.getElementById('topCarrier').textContent = topCarrier;
-            document.getElementById('successRate').textContent = successRate + '%';
-            
-            if (dashboardData.lastUpdated) {
-                const lastUpdated = new Date(dashboardData.lastUpdated);
-                document.getElementById('lastUpdated').textContent = 
-                    `Updated: ${lastUpdated.toLocaleDateString()} ${lastUpdated.toLocaleTimeString()}`;
-            }
+            document.getElementById('total-quotes').textContent = totalQuotes;
+            document.getElementById('bound-quotes').textContent = boundQuotes;
+            document.getElementById('success-rate').textContent = successRate + '%';
+            document.getElementById('top-carrier').textContent = topCarrier;
         }
-        
+
         function populateFilters() {
-            // Get unique operation types and commodities from the data - using your exact sheet column names
-            const operationTypes = [...new Set(dashboardData.quotes.map(q => 
-                q['Operation Type']
-            ).filter(Boolean))];
+            const operationTypes = [...new Set(dashboardData.quotes.map(q => q['Operation Type']).filter(Boolean))];
+            const commodities = [...new Set(dashboardData.quotes.map(q => q['Commodity']).filter(Boolean))];
             
-            const commodities = [...new Set(dashboardData.quotes.map(q => 
-                q['Commodity']
-            ).filter(Boolean))];
-            
-            // Populate operation type filter
-            const operationSelect = document.getElementById('operationType');
-            operationSelect.innerHTML = '<option value="all">All Operation Types</option>';
+            // Populate operation filter
+            const operationFilter = document.getElementById('operation-filter');
+            operationFilter.innerHTML = '<option value="all">All Operation Types</option>';
             operationTypes.forEach(type => {
-                const option = document.createElement('option');
-                option.value = type;
-                option.textContent = type;
-                operationSelect.appendChild(option);
+                operationFilter.innerHTML += `<option value="${type}">${type}</option>`;
             });
             
             // Populate commodity filter
-            const commoditySelect = document.getElementById('commodityType');
-            commoditySelect.innerHTML = '<option value="all">All Commodities</option>';
+            const commodityFilter = document.getElementById('commodity-filter');
+            commodityFilter.innerHTML = '<option value="all">All Commodities</option>';
             commodities.forEach(commodity => {
-                const option = document.createElement('option');
-                option.value = commodity;
-                option.textContent = commodity;
-                commoditySelect.appendChild(option);
+                commodityFilter.innerHTML += `<option value="${commodity}">${commodity}</option>`;
             });
         }
-        
+
         function showTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.add('hidden');
-            });
-            
-            // Remove active class from all buttons
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
-            });
-            
-            // Show selected tab
-            document.getElementById(tabName + '-tab').classList.remove('hidden');
-            
-            // Add active class to clicked button
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             
-            // Initialize tab content
-            if (tabName === 'routing') {
-                updateRouting();
-            } else if (tabName === 'carriers') {
-                updateCarrierTable();
-            } else if (tabName === 'operations') {
-                updateOperationsTab();
-            } else if (tabName === 'commodities') {
-                updateCommodityTable();
-            } else if (tabName === 'submissions') {
-                updateSubmissionsTable();
-            }
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            
+            // Update content based on tab
+            if (tabName === 'routing') updateRouting();
+            else if (tabName === 'performance') updateCarrierPerformance();
+            else if (tabName === 'analysis') updateAnalysis();
+            else if (tabName === 'submissions') updateSubmissions();
         }
-        
+
+        function updateAllTabs() {
+            updateRouting();
+            updateCarrierPerformance();
+            updateAnalysis();
+            updateSubmissions();
+        }
+
         function updateRouting() {
-            const operationType = document.getElementById('operationType')?.value || 'all';
-            const commodityType = document.getElementById('commodityType')?.value || 'all';
+            const operationType = document.getElementById('operation-filter').value;
+            const commodityType = document.getElementById('commodity-filter').value;
             
-            // Filter quotes based on selection - using your exact column names
-            const filteredQuotes = dashboardData.quotes.filter(q => {
-                const qOpType = q['Operation Type'];
-                const qCommodity = q['Commodity'];
-                
-                return (operationType === 'all' || qOpType === operationType) &&
-                       (commodityType === 'all' || qCommodity === commodityType);
-            });
+            // Filter quotes
+            const filteredQuotes = dashboardData.quotes.filter(q => 
+                (operationType === 'all' || q['Operation Type'] === operationType) &&
+                (commodityType === 'all' || q['Commodity'] === commodityType)
+            );
             
-            // Get corresponding carrier attempts - using your exact column names
+            // Get relevant carrier attempts
             const quoteIds = filteredQuotes.map(q => q['Quote ID (USDOT)']);
-            const relevantAttempts = dashboardData.carrierAttempts.filter(a => {
-                const attemptQuoteId = a['Quote ID (USDOT)'];
-                return quoteIds.includes(attemptQuoteId);
-            });
+            const relevantAttempts = dashboardData.carrierAttempts.filter(a => 
+                quoteIds.includes(a['Quote ID (USDOT)'])
+            );
             
-            // Calculate carrier performance - using your exact column names
+            // Calculate carrier performance
             const carrierStats = {};
             relevantAttempts.forEach(attempt => {
-                const carrierName = attempt['Carrier Name'];
-                if (!carrierName) return;
+                const carrier = attempt['Carrier Name'];
+                if (!carrier) return;
                 
-                if (!carrierStats[carrierName]) {
-                    carrierStats[carrierName] = {
-                        attempts: 0,
-                        quotes: 0,
-                        wins: 0
-                    };
+                if (!carrierStats[carrier]) {
+                    carrierStats[carrier] = { attempts: 0, quotes: 0, wins: 0 };
                 }
                 
-                carrierStats[carrierName].attempts++;
-                
-                const quoted = attempt['Quoted (Y/N)'] === 'Y' || attempt['Quoted (Y/N)'] === 'Yes';
-                const won = attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes';
-                
-                if (quoted) {
-                    carrierStats[carrierName].quotes++;
-                    if (won) {
-                        carrierStats[carrierName].wins++;
+                carrierStats[carrier].attempts++;
+                if (attempt['Quoted (Y/N)'] === 'Y' || attempt['Quoted (Y/N)'] === 'Yes') {
+                    carrierStats[carrier].quotes++;
+                    if (attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes') {
+                        carrierStats[carrier].wins++;
                     }
                 }
             });
             
-            // Calculate and sort recommendations
+            // Sort carriers by performance
             const recommendations = Object.entries(carrierStats)
                 .map(([carrier, stats]) => ({
                     carrier,
@@ -863,204 +748,161 @@
                 }))
                 .sort((a, b) => b.score - a.score);
             
-            // Update display
-            const container = document.getElementById('routingRecommendations');
-            container.innerHTML = '';
+            // Display recommendations
+            const container = document.getElementById('routing-recommendations');
             
             if (recommendations.length === 0) {
-                container.innerHTML = '<div class="no-data">📊 No carrier data available for this filter combination.</div>';
+                container.innerHTML = '<div class="no-data">No carrier data available for the selected filters</div>';
                 return;
             }
             
-            recommendations.slice(0, 6).forEach((rec, index) => {
-                const card = document.createElement('div');
-                card.className = `routing-card ${index === 0 ? 'first' : index === 1 ? 'second' : index === 2 ? 'third' : 'other'}`;
+            container.innerHTML = recommendations.slice(0, 6).map((rec, index) => {
+                const priority = index === 0 ? 'first' : index === 1 ? 'second' : index === 2 ? 'third' : 'other';
+                const label = index === 0 ? '1st Choice' : index === 1 ? '2nd Choice' : index === 2 ? '3rd Choice' : `${index + 1}th Option`;
                 
-                const badgeText = index === 0 ? '#1 FIRST CHOICE' : index === 1 ? '#2 BACKUP' : index === 2 ? '#3 ALTERNATIVE' : `#${index + 1} OPTION`;
-                const badgeClass = index === 0 ? 'first' : index === 1 ? 'second' : index === 2 ? 'third' : 'other';
-                
-                card.innerHTML = `
-                    <div class="routing-badge ${badgeClass}">${badgeText}</div>
-                    <div class="carrier-name">${rec.carrier}</div>
-                    <div class="carrier-stats">
-                        <div>📊 Quote Rate: <strong>${rec.quoteRate}%</strong></div>
-                        <div>🎯 Win Rate: <strong>${rec.winRate}%</strong></div>
-                        <div>📈 Attempts: <strong>${rec.attempts}</strong></div>
+                return `
+                    <div class="routing-card ${priority}">
+                        <div class="routing-badge ${priority}">${label}</div>
+                        <div class="carrier-name">${rec.carrier}</div>
+                        <div class="carrier-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">${rec.quoteRate}%</div>
+                                <div class="stat-label">Quote Rate</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${rec.winRate}%</div>
+                                <div class="stat-label">Win Rate</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${rec.attempts}</div>
+                                <div class="stat-label">Attempts</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${rec.score.toFixed(1)}</div>
+                                <div class="stat-label">Score</div>
+                            </div>
+                        </div>
                     </div>
                 `;
-                
-                container.appendChild(card);
-            });
+            }).join('');
         }
-        
-        function updateCarrierTable() {
+
+        function updateCarrierPerformance() {
             const carrierStats = {};
             
-            // Process carrier attempts using your exact column names
             dashboardData.carrierAttempts.forEach(attempt => {
-                const carrierName = attempt['Carrier Name'];
-                if (!carrierName) return;
+                const carrier = attempt['Carrier Name'];
+                if (!carrier) return;
                 
-                if (!carrierStats[carrierName]) {
-                    carrierStats[carrierName] = {
-                        submitted: 0,
-                        quoted: 0,
-                        won: 0,
-                        totalPremium: 0
-                    };
+                if (!carrierStats[carrier]) {
+                    carrierStats[carrier] = { submitted: 0, quoted: 0, won: 0 };
                 }
                 
-                carrierStats[carrierName].submitted++;
-                
-                const quoted = attempt['Quoted (Y/N)'] === 'Y' || attempt['Quoted (Y/N)'] === 'Yes';
-                const won = attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes';
-                const premium = parseFloat(attempt['Premium Amount'] || 0);
-                
-                if (quoted) {
-                    carrierStats[carrierName].quoted++;
-                    if (won) {
-                        carrierStats[carrierName].won++;
-                        carrierStats[carrierName].totalPremium += premium;
+                carrierStats[carrier].submitted++;
+                if (attempt['Quoted (Y/N)'] === 'Y' || attempt['Quoted (Y/N)'] === 'Yes') {
+                    carrierStats[carrier].quoted++;
+                    if (attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes') {
+                        carrierStats[carrier].won++;
                     }
                 }
             });
-
-            const tbody = document.getElementById('carrierTableBody');
-            tbody.innerHTML = '';
-
-            Object.entries(carrierStats).forEach(([carrier, stats]) => {
-                const quoteRatio = stats.submitted > 0 ? (stats.quoted / stats.submitted * 100).toFixed(1) : 0;
-                const winRatio = stats.quoted > 0 ? (stats.won / stats.quoted * 100).toFixed(1) : 0;
-                const avgPremium = stats.won > 0 ? Math.round(stats.totalPremium / stats.won) : 0;
-                const competitiveness = parseFloat(quoteRatio) * parseFloat(winRatio) / 100;
-                
-                const scoreClass = competitiveness > 50 ? 'score-high' : competitiveness > 25 ? 'score-medium' : 'score-low';
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>${carrier}</strong></td>
-                    <td>${stats.submitted}</td>
-                    <td>${stats.quoted}</td>
-                    <td>${stats.won}</td>
-                    <td>${quoteRatio}%</td>
-                    <td>${winRatio}%</td>
-                    <td>$${avgPremium.toLocaleString()}</td>
-                    <td><div class="performance-score ${scoreClass}">${competitiveness.toFixed(1)}</div></td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-        
-        function updateOperationsTab() {
-            const opTypes = {};
             
-            // Process quotes using your exact column names
-            dashboardData.quotes.forEach(quote => {
-                const type = quote['Operation Type'];
-                if (!type) return;
+            const tbody = document.getElementById('carrier-table-body');
+            tbody.innerHTML = Object.entries(carrierStats).map(([carrier, stats]) => {
+                const quoteRate = stats.submitted > 0 ? (stats.quoted / stats.submitted * 100).toFixed(1) : 0;
+                const winRate = stats.quoted > 0 ? (stats.won / stats.quoted * 100).toFixed(1) : 0;
+                const performance = parseFloat(quoteRate) * parseFloat(winRate) / 100;
+                const scoreClass = performance > 50 ? 'score-high' : performance > 25 ? 'score-medium' : 'score-low';
                 
-                if (!opTypes[type]) {
-                    opTypes[type] = {
-                        submissions: 0,
-                        bound: 0
-                    };
-                }
-                
-                opTypes[type].submissions++;
-                
-                if (quote.Status === 'Bound') {
-                    opTypes[type].bound++;
-                }
-            });
-
-            const container = document.getElementById('operationsContent');
-            container.innerHTML = '';
-
-            if (Object.keys(opTypes).length === 0) {
-                container.innerHTML = '<div class="no-data">📊 No operation type data available.</div>';
-                return;
-            }
-
-            Object.entries(opTypes).forEach(([type, data]) => {
-                const bindRatio = data.submissions > 0 ? (data.bound / data.submissions * 100).toFixed(1) : 0;
-
-                const card = document.createElement('div');
-                card.style.cssText = 'padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;';
-                card.innerHTML = `
-                    <div style="font-weight: bold; color: #2c3e50; font-size: 16px; margin-bottom: 8px;">🚛 ${type}</div>
-                    <div style="font-size: 14px; color: #7f8c8d;">
-                        <div>📊 ${data.submissions} submissions • ${data.bound} bound • ${bindRatio}% success</div>
-                    </div>
+                return `
+                    <tr>
+                        <td><strong>${carrier}</strong></td>
+                        <td>${stats.submitted}</td>
+                        <td>${stats.quoted}</td>
+                        <td>${stats.won}</td>
+                        <td>${quoteRate}%</td>
+                        <td>${winRate}%</td>
+                        <td><span class="performance-score ${scoreClass}">${performance.toFixed(1)}</span></td>
+                    </tr>
                 `;
-                container.appendChild(card);
-            });
+            }).join('');
         }
-        
-        function updateCommodityTable() {
+
+        function updateAnalysis() {
+            const operationTypes = {};
             const commodities = {};
             
-            // Process quotes using your exact column names
+            // Analyze operations
             dashboardData.quotes.forEach(quote => {
-                const commodity = quote['Commodity'];
-                if (!commodity) return;
-                
-                if (!commodities[commodity]) {
-                    commodities[commodity] = {
-                        submissions: 0,
-                        bound: 0
-                    };
-                }
-                
-                commodities[commodity].submissions++;
-                
-                if (quote.Status === 'Bound') {
-                    commodities[commodity].bound++;
-                }
-            });
-
-            const tbody = document.getElementById('commodityTableBody');
-            tbody.innerHTML = '';
-
-            Object.entries(commodities).forEach(([commodity, data]) => {
-                const bindRatio = data.submissions > 0 ? (data.bound / data.submissions * 100).toFixed(1) : 0;
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>📦 ${commodity}</strong></td>
-                    <td>${data.submissions}</td>
-                    <td>${data.bound}</td>
-                    <td>${bindRatio}%</td>
-                    <td>-</td>
-                    <td>-</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-        
-        function updateSubmissionsTable() {
-            const tbody = document.getElementById('submissionsTableBody');
-            tbody.innerHTML = '';
-
-            // Display quotes using your exact column names
-            dashboardData.quotes.forEach(quote => {
-                const date = quote['Date'];
-                const customer = quote['Customer Name'];
                 const operation = quote['Operation Type'];
                 const commodity = quote['Commodity'];
-                const status = quote['Status'];
-                const quoteId = quote['Quote ID (USDOT)'];
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${date || '-'}</td>
-                    <td>${customer || '-'}</td>
-                    <td>${operation || '-'}</td>
-                    <td>${commodity || '-'}</td>
-                    <td><span class="status-badge ${status === 'Bound' ? 'status-bound' : 'status-declined'}">${status || 'Unknown'}</span></td>
-                    <td>${quoteId || '-'}</td>
-                `;
-                tbody.appendChild(row);
+                const status = quote.Status;
+                
+                if (operation) {
+                    if (!operationTypes[operation]) operationTypes[operation] = { total: 0, bound: 0 };
+                    operationTypes[operation].total++;
+                    if (status === 'Bound') operationTypes[operation].bound++;
+                }
+                
+                if (commodity) {
+                    if (!commodities[commodity]) commodities[commodity] = { total: 0, bound: 0 };
+                    commodities[commodity].total++;
+                    if (status === 'Bound') commodities[commodity].bound++;
+                }
             });
+            
+            const container = document.getElementById('analysis-content');
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div>
+                        <h3 style="color: #2c3e50; margin-bottom: 15px;">Operation Types</h3>
+                        ${Object.entries(operationTypes).map(([type, data]) => {
+                            const rate = data.total > 0 ? (data.bound / data.total * 100).toFixed(1) : 0;
+                            return `
+                                <div style="background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #3498db;">
+                                    <div style="font-weight: bold; color: #2c3e50;">${type}</div>
+                                    <div style="color: #6c757d; margin-top: 5px;">
+                                        ${data.total} submissions • ${data.bound} bound • ${rate}% success
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div>
+                        <h3 style="color: #2c3e50; margin-bottom: 15px;">Commodities</h3>
+                        ${Object.entries(commodities).map(([commodity, data]) => {
+                            const rate = data.total > 0 ? (data.bound / data.total * 100).toFixed(1) : 0;
+                            return `
+                                <div style="background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #27ae60;">
+                                    <div style="font-weight: bold; color: #2c3e50;">${commodity}</div>
+                                    <div style="color: #6c757d; margin-top: 5px;">
+                                        ${data.total} submissions • ${data.bound} bound • ${rate}% success
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateSubmissions() {
+            const tbody = document.getElementById('submissions-table-body');
+            tbody.innerHTML = dashboardData.quotes.map(quote => {
+                const date = new Date(quote.Date).toLocaleDateString();
+                const statusClass = quote.Status === 'Bound' ? 'score-high' : 'score-medium';
+                
+                return `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${quote['Customer Name'] || '-'}</td>
+                        <td>${quote['Quote ID (USDOT)'] || '-'}</td>
+                        <td>${quote['Operation Type'] || '-'}</td>
+                        <td>${quote['Commodity'] || '-'}</td>
+                        <td><span class="performance-score ${statusClass}">${quote.Status || 'Unknown'}</span></td>
+                    </tr>
+                `;
+            }).join('');
         }
     </script>
 </body>
