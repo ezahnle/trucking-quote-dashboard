@@ -100,6 +100,18 @@
             border-left: 4px solid #f44336;
         }
         
+        .debug-info {
+            background: #f0f8ff;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -413,6 +425,9 @@
 
         <!-- Status Messages -->
         <div id="status-container"></div>
+        
+        <!-- Debug Info -->
+        <div id="debug-container"></div>
 
         <!-- Metrics -->
         <div class="metrics-grid" id="metrics-grid" style="display: none;">
@@ -571,6 +586,7 @@
 
         async function loadData() {
             const statusContainer = document.getElementById('status-container');
+            const debugContainer = document.getElementById('debug-container');
             const refreshBtn = document.getElementById('refresh-btn');
             
             try {
@@ -579,14 +595,47 @@
                 refreshBtn.textContent = 'Loading...';
                 showStatus('loading', 'Loading data from Google Sheets...');
                 
-                // Fetch data
-                const response = await fetch(`${APPS_SCRIPT_URL}?action=getDashboardData&timestamp=${Date.now()}`);
+                // Clear debug info
+                debugContainer.innerHTML = '';
+                
+                // Fetch data with timestamp to prevent caching
+                const fetchUrl = `${APPS_SCRIPT_URL}?action=getDashboardData&timestamp=${Date.now()}`;
+                console.log('Fetching from:', fetchUrl);
+                
+                const response = await fetch(fetchUrl, {
+                    method: 'GET',
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const data = await response.json();
+                const text = await response.text();
+                console.log('Raw response text length:', text.length);
+                console.log('Raw response preview:', text.substring(0, 200) + '...');
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    console.log('Full response text:', text);
+                    throw new Error('Invalid JSON response from server');
+                }
+                
+                console.log('Parsed data structure:', {
+                    hasQuotes: !!data.quotes,
+                    quotesLength: data.quotes ? data.quotes.length : 0,
+                    hasCarrierAttempts: !!data.carrierAttempts,
+                    carrierAttemptsLength: data.carrierAttempts ? data.carrierAttempts.length : 0,
+                    hasError: !!data.error
+                });
                 
                 if (data.error) {
                     throw new Error(data.error);
@@ -596,6 +645,19 @@
                 dashboardData.quotes = data.quotes || [];
                 dashboardData.carrierAttempts = data.carrierAttempts || [];
                 dashboardData.lastUpdated = data.lastUpdated || new Date().toISOString();
+                
+                // Debug info
+                const debugInfo = `Data loaded successfully:
+Quotes: ${dashboardData.quotes.length}
+Carrier Attempts: ${dashboardData.carrierAttempts.length}
+
+Sample Quote Structure: ${dashboardData.quotes.length > 0 ? JSON.stringify(Object.keys(dashboardData.quotes[0]), null, 2) : 'No quotes'}
+
+Sample Carrier Attempt Structure: ${dashboardData.carrierAttempts.length > 0 ? JSON.stringify(Object.keys(dashboardData.carrierAttempts[0]), null, 2) : 'No attempts'}
+
+Sample Status Values: ${dashboardData.quotes.map(q => q.Status || 'undefined').slice(0, 5).join(', ')}`;
+                
+                showDebugInfo(debugInfo);
                 
                 // Update UI
                 updateMetrics();
@@ -616,6 +678,7 @@
             } catch (error) {
                 console.error('Error loading data:', error);
                 showStatus('error', `Failed to load data: ${error.message}`);
+                showDebugInfo(`Error details: ${error.toString()}\nCheck browser console for more details.`);
             } finally {
                 refreshBtn.disabled = false;
                 refreshBtn.textContent = 'Refresh Data';
@@ -638,16 +701,48 @@
             }
         }
 
+        function showDebugInfo(message) {
+            const debugContainer = document.getElementById('debug-container');
+            debugContainer.innerHTML = `
+                <div class="debug-info">
+                    Debug Information:
+                    ${message}
+                </div>
+            `;
+            
+            // Auto-hide debug info after 15 seconds
+            setTimeout(() => {
+                debugContainer.innerHTML = '';
+            }, 15000);
+        }
+
         function updateMetrics() {
             const totalQuotes = dashboardData.quotes.length;
-            const boundQuotes = dashboardData.quotes.filter(q => q.Status === 'Bound').length;
+            
+            // Check for different possible status values
+            const boundQuotes = dashboardData.quotes.filter(q => {
+                const status = q.Status || q.status || '';
+                return status.toLowerCase().includes('bound') || 
+                       status.toLowerCase() === 'won' ||
+                       status.toLowerCase() === 'complete';
+            }).length;
+            
             const successRate = totalQuotes > 0 ? ((boundQuotes / totalQuotes) * 100).toFixed(1) : 0;
             
-            // Find top carrier
+            // Find top carrier - check multiple possible field names for "Won"
             const carrierWins = {};
             dashboardData.carrierAttempts.forEach(attempt => {
-                if ((attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes') && attempt['Carrier Name']) {
-                    carrierWins[attempt['Carrier Name']] = (carrierWins[attempt['Carrier Name']] || 0) + 1;
+                const won = attempt['Won (Y/N)'] === 'Y' || 
+                           attempt['Won (Y/N)'] === 'Yes' || 
+                           attempt.Won === 'Y' || 
+                           attempt.Won === 'Yes' ||
+                           attempt.won === 'Y' || 
+                           attempt.won === 'Yes';
+                           
+                const carrierName = attempt['Carrier Name'] || attempt.carrierName || attempt.carrier;
+                
+                if (won && carrierName) {
+                    carrierWins[carrierName] = (carrierWins[carrierName] || 0) + 1;
                 }
             });
             
@@ -658,11 +753,22 @@
             document.getElementById('bound-quotes').textContent = boundQuotes;
             document.getElementById('success-rate').textContent = successRate + '%';
             document.getElementById('top-carrier').textContent = topCarrier;
+            
+            console.log('Metrics updated:', { totalQuotes, boundQuotes, successRate, topCarrier });
         }
 
         function populateFilters() {
-            const operationTypes = [...new Set(dashboardData.quotes.map(q => q['Operation Type']).filter(Boolean))];
-            const commodities = [...new Set(dashboardData.quotes.map(q => q['Commodity']).filter(Boolean))];
+            // Get unique operation types and commodities - handle multiple possible field names
+            const operationTypes = [...new Set(dashboardData.quotes.map(q => 
+                q['Operation Type'] || q.operationType || q.operation || q.Operation
+            ).filter(Boolean))];
+            
+            const commodities = [...new Set(dashboardData.quotes.map(q => 
+                q['Commodity'] || q.commodity || q.Commodity
+            ).filter(Boolean))];
+            
+            console.log('Found operation types:', operationTypes);
+            console.log('Found commodities:', commodities);
             
             // Populate operation filter
             const operationFilter = document.getElementById('operation-filter');
@@ -706,22 +812,33 @@
             const operationType = document.getElementById('operation-filter').value;
             const commodityType = document.getElementById('commodity-filter').value;
             
-            // Filter quotes
-            const filteredQuotes = dashboardData.quotes.filter(q => 
-                (operationType === 'all' || q['Operation Type'] === operationType) &&
-                (commodityType === 'all' || q['Commodity'] === commodityType)
+            // Filter quotes - handle multiple possible field names
+            const filteredQuotes = dashboardData.quotes.filter(q => {
+                const qOpType = q['Operation Type'] || q.operationType || q.operation || q.Operation;
+                const qCommodity = q['Commodity'] || q.commodity || q.Commodity;
+                
+                return (operationType === 'all' || qOpType === operationType) &&
+                       (commodityType === 'all' || qCommodity === commodityType);
+            });
+            
+            console.log('Filtered quotes:', filteredQuotes.length);
+            
+            // Get relevant carrier attempts - handle multiple possible field names
+            const quoteIds = filteredQuotes.map(q => 
+                q['Quote ID (USDOT)'] || q.quoteId || q.id || q.ID
             );
             
-            // Get relevant carrier attempts
-            const quoteIds = filteredQuotes.map(q => q['Quote ID (USDOT)']);
-            const relevantAttempts = dashboardData.carrierAttempts.filter(a => 
-                quoteIds.includes(a['Quote ID (USDOT)'])
-            );
+            const relevantAttempts = dashboardData.carrierAttempts.filter(a => {
+                const attemptQuoteId = a['Quote ID (USDOT)'] || a.quoteId || a.id || a.ID;
+                return quoteIds.includes(attemptQuoteId);
+            });
+            
+            console.log('Relevant attempts:', relevantAttempts.length);
             
             // Calculate carrier performance
             const carrierStats = {};
             relevantAttempts.forEach(attempt => {
-                const carrier = attempt['Carrier Name'];
+                const carrier = attempt['Carrier Name'] || attempt.carrierName || attempt.carrier;
                 if (!carrier) return;
                 
                 if (!carrierStats[carrier]) {
@@ -729,13 +846,30 @@
                 }
                 
                 carrierStats[carrier].attempts++;
-                if (attempt['Quoted (Y/N)'] === 'Y' || attempt['Quoted (Y/N)'] === 'Yes') {
+                
+                const quoted = attempt['Quoted (Y/N)'] === 'Y' || 
+                              attempt['Quoted (Y/N)'] === 'Yes' ||
+                              attempt.Quoted === 'Y' || 
+                              attempt.Quoted === 'Yes' ||
+                              attempt.quoted === 'Y' || 
+                              attempt.quoted === 'Yes';
+                              
+                const won = attempt['Won (Y/N)'] === 'Y' || 
+                           attempt['Won (Y/N)'] === 'Yes' ||
+                           attempt.Won === 'Y' || 
+                           attempt.Won === 'Yes' ||
+                           attempt.won === 'Y' || 
+                           attempt.won === 'Yes';
+                
+                if (quoted) {
                     carrierStats[carrier].quotes++;
-                    if (attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes') {
+                    if (won) {
                         carrierStats[carrier].wins++;
                     }
                 }
             });
+            
+            console.log('Carrier stats:', carrierStats);
             
             // Sort carriers by performance
             const recommendations = Object.entries(carrierStats)
@@ -791,7 +925,7 @@
             const carrierStats = {};
             
             dashboardData.carrierAttempts.forEach(attempt => {
-                const carrier = attempt['Carrier Name'];
+                const carrier = attempt['Carrier Name'] || attempt.carrierName || attempt.carrier;
                 if (!carrier) return;
                 
                 if (!carrierStats[carrier]) {
@@ -799,9 +933,24 @@
                 }
                 
                 carrierStats[carrier].submitted++;
-                if (attempt['Quoted (Y/N)'] === 'Y' || attempt['Quoted (Y/N)'] === 'Yes') {
+                
+                const quoted = attempt['Quoted (Y/N)'] === 'Y' || 
+                              attempt['Quoted (Y/N)'] === 'Yes' ||
+                              attempt.Quoted === 'Y' || 
+                              attempt.Quoted === 'Yes' ||
+                              attempt.quoted === 'Y' || 
+                              attempt.quoted === 'Yes';
+                              
+                const won = attempt['Won (Y/N)'] === 'Y' || 
+                           attempt['Won (Y/N)'] === 'Yes' ||
+                           attempt.Won === 'Y' || 
+                           attempt.Won === 'Yes' ||
+                           attempt.won === 'Y' || 
+                           attempt.won === 'Yes';
+                
+                if (quoted) {
                     carrierStats[carrier].quoted++;
-                    if (attempt['Won (Y/N)'] === 'Y' || attempt['Won (Y/N)'] === 'Yes') {
+                    if (won) {
                         carrierStats[carrier].won++;
                     }
                 }
@@ -834,20 +983,24 @@
             
             // Analyze operations
             dashboardData.quotes.forEach(quote => {
-                const operation = quote['Operation Type'];
-                const commodity = quote['Commodity'];
-                const status = quote.Status;
+                const operation = quote['Operation Type'] || quote.operationType || quote.operation || quote.Operation;
+                const commodity = quote['Commodity'] || quote.commodity || quote.Commodity;
+                const status = quote.Status || quote.status || '';
+                
+                const isBound = status.toLowerCase().includes('bound') || 
+                               status.toLowerCase() === 'won' ||
+                               status.toLowerCase() === 'complete';
                 
                 if (operation) {
                     if (!operationTypes[operation]) operationTypes[operation] = { total: 0, bound: 0 };
                     operationTypes[operation].total++;
-                    if (status === 'Bound') operationTypes[operation].bound++;
+                    if (isBound) operationTypes[operation].bound++;
                 }
                 
                 if (commodity) {
                     if (!commodities[commodity]) commodities[commodity] = { total: 0, bound: 0 };
                     commodities[commodity].total++;
-                    if (status === 'Bound') commodities[commodity].bound++;
+                    if (isBound) commodities[commodity].bound++;
                 }
             });
             
@@ -889,17 +1042,31 @@
         function updateSubmissions() {
             const tbody = document.getElementById('submissions-table-body');
             tbody.innerHTML = dashboardData.quotes.map(quote => {
-                const date = new Date(quote.Date).toLocaleDateString();
-                const statusClass = quote.Status === 'Bound' ? 'score-high' : 'score-medium';
+                // Handle multiple possible date formats
+                const dateValue = quote.Date || quote.date;
+                let displayDate = 'Unknown';
+                if (dateValue) {
+                    try {
+                        displayDate = new Date(dateValue).toLocaleDateString();
+                    } catch (e) {
+                        displayDate = dateValue.toString();
+                    }
+                }
+                
+                const status = quote.Status || quote.status || 'Unknown';
+                const isBound = status.toLowerCase().includes('bound') || 
+                               status.toLowerCase() === 'won' ||
+                               status.toLowerCase() === 'complete';
+                const statusClass = isBound ? 'score-high' : 'score-medium';
                 
                 return `
                     <tr>
-                        <td>${date}</td>
-                        <td>${quote['Customer Name'] || '-'}</td>
-                        <td>${quote['Quote ID (USDOT)'] || '-'}</td>
-                        <td>${quote['Operation Type'] || '-'}</td>
-                        <td>${quote['Commodity'] || '-'}</td>
-                        <td><span class="performance-score ${statusClass}">${quote.Status || 'Unknown'}</span></td>
+                        <td>${displayDate}</td>
+                        <td>${quote['Customer Name'] || quote.customerName || '-'}</td>
+                        <td>${quote['Quote ID (USDOT)'] || quote.quoteId || quote.ID || '-'}</td>
+                        <td>${quote['Operation Type'] || quote.operationType || quote.operation || '-'}</td>
+                        <td>${quote['Commodity'] || quote.commodity || '-'}</td>
+                        <td><span class="performance-score ${statusClass}">${status}</span></td>
                     </tr>
                 `;
             }).join('');
