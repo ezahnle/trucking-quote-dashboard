@@ -814,6 +814,27 @@
             }
         };
 
+        // Helper functions to handle different column name variations
+        function getCarrierName(attempt) {
+            return attempt['Carrier Name'] || 
+                   attempt.carrierName || 
+                   attempt.carrier || 
+                   attempt.Carrier ||  // Added this - matches your Column B
+                   attempt['Carrier'];
+        }
+
+        // Helper function to get quote status
+        function getQuoteStatus(attempt) {
+            const quoted = attempt['Quoted (Y/N)'] || attempt['Quote'] || attempt.Quote || '';
+            return quoted.toString().toUpperCase() === 'Y' || quoted.toString().toLowerCase() === 'yes';
+        }
+
+        // Helper function to get win status  
+        function getWinStatus(attempt) {
+            const won = attempt['Won (Y/N)'] || attempt['Won'] || attempt.Won || '';
+            return won.toString().toUpperCase() === 'Y' || won.toString().toLowerCase() === 'yes';
+        }
+
         // Debug logging
         function debugLog(message, data = null) {
             console.log(message, data);
@@ -971,10 +992,10 @@
                     { 'Quote ID (USDOT)': '3659714', 'Customer Name': 'Panama Trucking', 'Operation Type': 'Regional', 'Commodity': 'Containers', 'Status': 'Pending', 'Date': '2025-08-27' }
                 ],
                 carrierAttempts: [
-                    { 'Quote ID (USDOT)': '3466447', 'Carrier Name': 'Progressive', 'Quoted (Y/N)': 'Y', 'Won (Y/N)': 'Y' },
-                    { 'Quote ID (USDOT)': '4440022', 'Carrier Name': 'Sentry', 'Quoted (Y/N)': 'Y', 'Won (Y/N)': 'N' },
-                    { 'Quote ID (USDOT)': '4440022', 'Carrier Name': 'Bellingham', 'Quoted (Y/N)': 'N', 'Won (Y/N)': 'N' },
-                    { 'Quote ID (USDOT)': '3659714', 'Carrier Name': 'ATM', 'Quoted (Y/N)': 'Y', 'Won (Y/N)': 'N' }
+                    { 'Quote ID (USDOT)': '3466447', 'Carrier': 'Progressive', 'Quoted (Y/N)': 'Y', 'Won (Y/N)': 'Y' },
+                    { 'Quote ID (USDOT)': '4440022', 'Carrier': 'Sentry', 'Quoted (Y/N)': 'Y', 'Won (Y/N)': 'N' },
+                    { 'Quote ID (USDOT)': '4440022', 'Carrier': 'Bellingham', 'Quoted (Y/N)': 'N', 'Won (Y/N)': 'N' },
+                    { 'Quote ID (USDOT)': '3659714', 'Carrier': 'ATM', 'Quoted (Y/N)': 'Y', 'Won (Y/N)': 'N' }
                 ],
                 lastUpdated: new Date().toISOString()
             };
@@ -1014,7 +1035,7 @@
             // Calculate actual performance from carrier attempts data
             const carrierPerformance = {};
             dashboardData.carrierAttempts.forEach(attempt => {
-                const carrier = attempt['Carrier Name'] || attempt.carrierName;
+                const carrier = getCarrierName(attempt);
                 if (!carrier) return;
                 
                 if (!carrierPerformance[carrier]) {
@@ -1023,8 +1044,8 @@
                 
                 carrierPerformance[carrier].attempts++;
                 
-                const quoted = (attempt['Quoted (Y/N)'] || '').toString().toUpperCase() === 'Y';
-                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y';
+                const quoted = getQuoteStatus(attempt);
+                const won = getWinStatus(attempt);
                 
                 if (quoted) {
                     carrierPerformance[carrier].quotes++;
@@ -1233,14 +1254,12 @@
             
             // Count actual bound policies from carrier attempts (Won Y/N = Y)
             const boundPolicies = dashboardData.carrierAttempts.filter(attempt => {
-                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y';
-                return won;
+                return getWinStatus(attempt);
             }).length;
             
             // Count quotes provided by carriers (Quoted Y/N = Y)
             const quotesProvided = dashboardData.carrierAttempts.filter(attempt => {
-                const quoted = (attempt['Quoted (Y/N)'] || '').toString().toUpperCase() === 'Y';
-                return quoted;
+                return getQuoteStatus(attempt);
             }).length;
             
             const bindRate = totalQuotes > 0 ? ((boundPolicies / totalQuotes) * 100).toFixed(1) : 0;
@@ -1248,8 +1267,8 @@
             // Find top carrier by actual wins
             const carrierWins = {};
             dashboardData.carrierAttempts.forEach(attempt => {
-                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y';
-                const carrierName = attempt['Carrier Name'] || attempt.carrierName || attempt.carrier;
+                const won = getWinStatus(attempt);
+                const carrierName = getCarrierName(attempt);
                 
                 if (won && carrierName) {
                     carrierWins[carrierName] = (carrierWins[carrierName] || 0) + 1;
@@ -1264,7 +1283,15 @@
             document.getElementById('success-rate').textContent = bindRate + '%';
             document.getElementById('top-carrier').textContent = topCarrier;
             
-            debugLog('Metrics updated:', { totalQuotes, boundPolicies, quotesProvided, bindRate, topCarrier });
+            debugLog('Metrics updated:', { 
+                totalQuotes, 
+                boundPolicies, 
+                quotesProvided, 
+                bindRate, 
+                topCarrier,
+                carrierAttempts: dashboardData.carrierAttempts.length,
+                sampleCarrier: dashboardData.carrierAttempts[0] ? getCarrierName(dashboardData.carrierAttempts[0]) : 'none'
+            });
         }
 
         function populateFilters() {
@@ -1348,7 +1375,7 @@
             // Calculate carrier performance
             const carrierStats = {};
             relevantAttempts.forEach(attempt => {
-                const carrier = attempt['Carrier Name'] || attempt.carrierName || attempt.carrier;
+                const carrier = getCarrierName(attempt);
                 if (!carrier) return;
                 
                 if (!carrierStats[carrier]) {
@@ -1357,11 +1384,8 @@
                 
                 carrierStats[carrier].attempts++;
                 
-                const quoted = (attempt['Quoted (Y/N)'] || '').toString().toUpperCase() === 'Y' || 
-                              (attempt['Quoted (Y/N)'] || '').toString().toLowerCase() === 'yes';
-                              
-                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y' || 
-                           (attempt['Won (Y/N)'] || '').toString().toLowerCase() === 'yes';
+                const quoted = getQuoteStatus(attempt);
+                const won = getWinStatus(attempt);
                 
                 if (quoted) {
                     carrierStats[carrier].quotes++;
@@ -1443,7 +1467,7 @@
             const submittedCarriers = {};
             dashboardData.carrierAttempts.forEach(attempt => {
                 const quoteId = attempt['Quote ID (USDOT)'] || attempt.quoteId;
-                const carrier = attempt['Carrier Name'] || attempt.carrierName;
+                const carrier = getCarrierName(attempt);
                 if (quoteId && carrier) {
                     if (!submittedCarriers[quoteId]) submittedCarriers[quoteId] = [];
                     submittedCarriers[quoteId].push(carrier);
@@ -1715,7 +1739,7 @@
             const carrierStats = {};
             
             dashboardData.carrierAttempts.forEach(attempt => {
-                const carrier = attempt['Carrier Name'] || attempt.carrierName || attempt.carrier;
+                const carrier = getCarrierName(attempt);
                 if (!carrier) return;
                 
                 if (!carrierStats[carrier]) {
@@ -1724,11 +1748,8 @@
                 
                 carrierStats[carrier].submitted++;
                 
-                const quoted = (attempt['Quoted (Y/N)'] || '').toString().toUpperCase() === 'Y' || 
-                              (attempt['Quoted (Y/N)'] || '').toString().toLowerCase() === 'yes';
-                              
-                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y' || 
-                           (attempt['Won (Y/N)'] || '').toString().toLowerCase() === 'yes';
+                const quoted = getQuoteStatus(attempt);
+                const won = getWinStatus(attempt);
                 
                 if (quoted) {
                     carrierStats[carrier].quoted++;
