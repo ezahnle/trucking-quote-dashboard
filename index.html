@@ -816,23 +816,41 @@
 
         // Helper functions to handle different column name variations
         function getCarrierName(attempt) {
+            // Debug: log the attempt object to see field names
+            if (Object.keys(dashboardData.carrierAttempts).length > 0 && Math.random() < 0.01) {
+                debugLog('Sample carrier attempt object:', attempt);
+                debugLog('Available fields:', Object.keys(attempt));
+            }
+            
             return attempt['Carrier Name'] || 
                    attempt.carrierName || 
                    attempt.carrier || 
-                   attempt.Carrier ||  // Added this - matches your Column B
-                   attempt['Carrier'];
+                   attempt.Carrier ||
+                   attempt['Carrier'] ||
+                   attempt['B'] ||  // Sometimes Google Sheets returns column letters
+                   '';
         }
 
         // Helper function to get quote status
         function getQuoteStatus(attempt) {
-            const quoted = attempt['Quoted (Y/N)'] || attempt['Quote'] || attempt.Quote || '';
+            const quoted = attempt['Quoted (Y/N)'] || attempt['Quote'] || attempt.Quote || attempt['E'] || '';
             return quoted.toString().toUpperCase() === 'Y' || quoted.toString().toLowerCase() === 'yes';
         }
 
         // Helper function to get win status  
         function getWinStatus(attempt) {
-            const won = attempt['Won (Y/N)'] || attempt['Won'] || attempt.Won || '';
+            const won = attempt['Won (Y/N)'] || attempt['Won'] || attempt.Won || attempt['G'] || '';
             return won.toString().toUpperCase() === 'Y' || won.toString().toLowerCase() === 'yes';
+        }
+
+        // Helper function to get quote ID
+        function getQuoteId(attempt) {
+            return attempt['Quote ID (USDOT)'] || 
+                   attempt.quoteId || 
+                   attempt.id || 
+                   attempt.ID ||
+                   attempt['A'] ||  // Column A
+                   '';
         }
 
         // Debug logging
@@ -1252,6 +1270,11 @@
         function updateMetrics() {
             const totalQuotes = dashboardData.quotes.length;
             
+            debugLog('Processing carrier attempts for metrics:', {
+                totalAttempts: dashboardData.carrierAttempts.length,
+                sampleAttempt: dashboardData.carrierAttempts[0]
+            });
+            
             // Count actual bound policies from carrier attempts (Won Y/N = Y)
             const boundPolicies = dashboardData.carrierAttempts.filter(attempt => {
                 return getWinStatus(attempt);
@@ -1266,14 +1289,23 @@
             
             // Find top carrier by actual wins
             const carrierWins = {};
+            const carrierAttempts = {};
+            
             dashboardData.carrierAttempts.forEach(attempt => {
                 const won = getWinStatus(attempt);
                 const carrierName = getCarrierName(attempt);
                 
-                if (won && carrierName) {
-                    carrierWins[carrierName] = (carrierWins[carrierName] || 0) + 1;
+                if (carrierName) {
+                    carrierAttempts[carrierName] = (carrierAttempts[carrierName] || 0) + 1;
+                    
+                    if (won) {
+                        carrierWins[carrierName] = (carrierWins[carrierName] || 0) + 1;
+                    }
                 }
             });
+            
+            debugLog('Carrier attempts breakdown:', carrierAttempts);
+            debugLog('Carrier wins breakdown:', carrierWins);
             
             const topCarrier = Object.entries(carrierWins)
                 .sort((a, b) => b[1] - a[1])[0]?.[0] || 'No wins yet';
@@ -1289,8 +1321,8 @@
                 quotesProvided, 
                 bindRate, 
                 topCarrier,
-                carrierAttempts: dashboardData.carrierAttempts.length,
-                sampleCarrier: dashboardData.carrierAttempts[0] ? getCarrierName(dashboardData.carrierAttempts[0]) : 'none'
+                totalCarrierAttempts: dashboardData.carrierAttempts.length,
+                uniqueCarriers: Object.keys(carrierAttempts).length
             });
         }
 
@@ -1466,13 +1498,18 @@
             // Get already submitted carriers for each quote
             const submittedCarriers = {};
             dashboardData.carrierAttempts.forEach(attempt => {
-                const quoteId = attempt['Quote ID (USDOT)'] || attempt.quoteId;
+                const quoteId = getQuoteId(attempt);
                 const carrier = getCarrierName(attempt);
+                
                 if (quoteId && carrier) {
                     if (!submittedCarriers[quoteId]) submittedCarriers[quoteId] = [];
-                    submittedCarriers[quoteId].push(carrier);
+                    if (!submittedCarriers[quoteId].includes(carrier)) {
+                        submittedCarriers[quoteId].push(carrier);
+                    }
                 }
             });
+
+            debugLog('Submitted carriers mapping:', submittedCarriers);
 
             container.innerHTML = marketableQuotes.map((quote, index) => {
                 const quoteId = quote['Quote ID (USDOT)'] || quote.quoteId;
@@ -1585,10 +1622,188 @@
                             <button onclick="submitToCarriers(${index}, '${quoteId}')" class="submit-button" id="submit_${index}">
                                 Submit Selected Carriers
                             </button>
+                            
+                            <button onclick="draftEmail(${index}, '${quoteId}')" class="submit-button" id="email_${index}" style="background: linear-gradient(135deg, #3498db, #2980b9); margin-left: 10px;">
+                                Draft Email to Selected Carriers
+                            </button>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        // Extract underwriter emails from carrier directory
+        function getCarrierEmails(carrierNames) {
+            const emails = [];
+            carrierNames.forEach(carrierName => {
+                const info = carrierInfo[carrierName];
+                if (info && info.contact) {
+                    // Extract email from contact info using regex
+                    const emailMatch = info.contact.match(/[\w\.-]+@[\w\.-]+\.\w+/g);
+                    if (emailMatch) {
+                        emails.push(...emailMatch);
+                    }
+                    
+                    // Also check specialties field for additional emails
+                    if (info.specialties) {
+                        const specialtyEmails = info.specialties.match(/[\w\.-]+@[\w\.-]+\.\w+/g);
+                        if (specialtyEmails) {
+                            emails.push(...specialtyEmails);
+                        }
+                    }
+                }
+            });
+            
+            return [...new Set(emails)]; // Remove duplicates
+        }
+
+        // Draft email functionality
+        function draftEmail(quoteIndex, quoteId) {
+            const quoteCard = document.getElementById(`quote-${quoteIndex}`);
+            
+            // Get selected carriers
+            const selectedCarriers = [];
+            const checkboxes = quoteCard.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)');
+            
+            checkboxes.forEach(checkbox => {
+                const label = checkbox.nextElementSibling.textContent.split('(')[0].trim();
+                selectedCarriers.push(label);
+            });
+            
+            if (selectedCarriers.length === 0) {
+                alert('Please select at least one carrier to email.');
+                return;
+            }
+            
+            // Get quote details
+            const quote = dashboardData.quotes.find(q => (getQuoteId(q) || q['Quote ID (USDOT)']) === quoteId);
+            if (!quote) {
+                alert('Quote details not found.');
+                return;
+            }
+            
+            // Get underwriter emails
+            const bccEmails = getCarrierEmails(selectedCarriers);
+            
+            // Draft email content
+            const subject = `Commercial Trucking Insurance Quote Request - ${quote['Customer Name'] || 'Customer'} (DOT: ${quoteId})`;
+            
+            const emailBody = `Dear Underwriter,
+
+I hope this message finds you well. I am submitting a commercial trucking insurance quote request for your review and consideration.
+
+ACCOUNT DETAILS:
+• Customer Name: ${quote['Customer Name'] || 'Not specified'}
+• DOT Number: ${quoteId}
+• Operation Type: ${quote['Operation Type'] || 'Not specified'}
+• Commodity: ${quote['Commodity'] || 'Not specified'}
+• Fleet Size: ${quote['Fleet Size (Trucks)'] || '1'} truck(s)
+• Operating Radius: ${quote.Radius || 'Not specified'} miles
+• State: ${quote.State || 'Not specified'}
+• Years in Business: ${quote['Years in Business'] || 'Not specified'}
+
+Please review this submission and provide your best quote when possible. I look forward to working with you on this account.
+
+Best regards,
+Ed Zahnle
+Licensed Insurance Agent - Progressive Premier Producer
+Network Trucking Insurance
+Phone: 800-266-8789
+Email: ed.zahnle@truckerinsurance.com
+
+---
+Submitted to: ${selectedCarriers.join(', ')}`;
+
+            // Create email modal
+            showEmailModal(subject, emailBody, bccEmails, selectedCarriers);
+        }
+
+        // Show email composition modal
+        function showEmailModal(subject, body, bccEmails, carriers) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.5); z-index: 2000; display: flex; 
+                align-items: center; justify-content: center;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 800px; max-height: 80%; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="color: #2c3e50; margin: 0;">Draft Email to Carriers</h3>
+                        <button onclick="closeEmailModal()" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">×</button>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">BCC Recipients (${carriers.join(', ')}):</label>
+                        <textarea id="email-bcc" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; height: 60px;" readonly>${bccEmails.join('; ')}</textarea>
+                        <small style="color: #666;">These emails were extracted from your carrier directory</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Subject:</label>
+                        <input type="text" id="email-subject" value="${subject}" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Email Body:</label>
+                        <textarea id="email-body" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; height: 300px;">${body}</textarea>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <button onclick="openEmailClient()" style="background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 6px; margin-right: 10px; cursor: pointer;">Open in Email Client</button>
+                        <button onclick="copyEmailContent()" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer;">Copy Email Content</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            window.currentEmailModal = modal;
+        }
+
+        // Close email modal
+        function closeEmailModal() {
+            if (window.currentEmailModal) {
+                document.body.removeChild(window.currentEmailModal);
+                window.currentEmailModal = null;
+            }
+        }
+
+        // Open email in default email client
+        function openEmailClient() {
+            const subject = encodeURIComponent(document.getElementById('email-subject').value);
+            const body = encodeURIComponent(document.getElementById('email-body').value);
+            const bcc = encodeURIComponent(document.getElementById('email-bcc').value);
+            
+            const mailtoLink = `mailto:?subject=${subject}&body=${body}&bcc=${bcc}`;
+            
+            // Open mailto link
+            window.location.href = mailtoLink;
+            
+            // Close modal after a short delay
+            setTimeout(closeEmailModal, 1000);
+        }
+
+        // Copy email content to clipboard
+        function copyEmailContent() {
+            const subject = document.getElementById('email-subject').value;
+            const body = document.getElementById('email-body').value;
+            const bcc = document.getElementById('email-bcc').value;
+            
+            const fullContent = `Subject: ${subject}\n\nBCC: ${bcc}\n\n${body}`;
+            
+            navigator.clipboard.writeText(fullContent).then(() => {
+                alert('Email content copied to clipboard!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = fullContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Email content copied to clipboard!');
+            });
         }
 
         function getSmartCarrierRecommendations(operation, commodity) {
