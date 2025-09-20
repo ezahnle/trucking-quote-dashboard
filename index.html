@@ -726,35 +726,91 @@
             lastUpdated: null
         };
 
-        // Carrier information storage
+        // Carrier information storage - Updated from MGA Quick View 2023
         let carrierInfo = {
-            'Progressive Commercial': {
-                contact: 'Agent codes: 36046 or 66929',
+            'Progressive': {
+                contact: 'Phone: 800-876-8270, Fax: 800-556-0014, Agent Code: 36046',
                 territory: 'California dump trucks - AUTOMATIC first choice',
-                specialties: 'WON\'T DO UIIA containers',
+                specialties: 'WON\'T DO UIIA containers, Email: progressivecommercial@email.progressive.com',
                 underwriter: 'Ed Zahnle - Premier Producer',
-                notes: 'Best rates for CA dump trucks'
+                notes: 'Claims: INSURED REPORTS 800-876-8270'
             },
             'Sentry Select': {
-                contact: 'Payment: 800-742-5681',
-                territory: 'National coverage',
-                specialties: 'Will do UIIA containers, Avoids Long Beach/LA/NJ ports',
-                underwriter: 'Regional underwriter',
-                notes: 'Good alternative for containers'
+                contact: 'Phone: 800-610-4888, Fax: 715-346-8913',
+                territory: 'National coverage - 3+ years experience preferred',
+                specialties: 'Refrigerated, General Freight, Flatbed, Auto Transport. Contact: Zach Hetzer <Zach.Hetzer@sentry.com>',
+                underwriter: 'Zach Hetzer - Sentry Select',
+                notes: 'Claims: Insured report to main number'
             },
             'Bellingham': {
-                contact: 'Nicole Direct: 360-922-5244',
+                contact: 'Phone: 360-671-0500, Fax: 360-671-3959',
                 territory: '250 mile radius and under market',
-                specialties: 'Regional specialist, Requires full docs package',
-                underwriter: 'Nicole - Direct contact',
-                notes: 'Local/regional focus only'
+                specialties: 'Regional specialist, Email: info@bell-uw.com',
+                underwriter: 'Nicole Direct: 360-922-5244, Loss Runs: info@bell-uw.com',
+                notes: 'Claims: newclaim@nationalclaims.net, 800-433-6466, Fax: 503-636-1605'
             },
-            'IAT Insurance': {
-                contact: 'Fleet department',
+            'American Team Managers': {
+                contact: 'Phone: 800-888-9891, West Coast Fax: 714-414-1299, East Coast Fax: 866-548-2637',
                 territory: 'Multi-state coverage',
-                specialties: 'Fleet specialist (8+ trucks), Strong long haul appetite',
-                underwriter: 'Fleet underwriting team',
-                notes: 'Best for multiple unit operations'
+                specialties: 'Fleet specialist, Email: jackie@atminsurance.com',
+                underwriter: 'Jackie - ATM Insurance',
+                notes: 'Claims: Insured reports for most, dongbu claims: yorkclaimsintake@yorkrsg.com'
+            },
+            'IMCO': {
+                contact: 'Phone: 800-944-3128, Fax: 503-783-2686',
+                territory: 'West Coast coverage',
+                specialties: 'Barbie Quirk: b.quirk@imcoinsurance.com, Lancer policies: b.beard@imcoinsurance.com',
+                underwriter: 'Barbie Quirk - IMCO',
+                notes: 'Claims: claims@imcoinsurance.com WE REPORT, Endorsements: endorsements@imcoinsurance.com'
+            },
+            'Interline': {
+                contact: 'Phone: 800-229-8790, Keri Direct: 562-733-6752',
+                territory: 'West Coast operations',
+                specialties: 'Keri Thompson: keri.thompson@meadowbrook.com',
+                underwriter: 'Keri Thompson - Meadowbrook',
+                notes: 'Claims: newclaim@meadowbrook.com, 562-404-0315, Fax: 562-685-0197'
+            },
+            'Coastal': {
+                contact: 'Phone: 800-752-1090, Fax: 925-277-7754',
+                territory: 'California operations',
+                specialties: 'Marilyn Lappin: mlappin@coastalbrokersins.com',
+                underwriter: 'Loss Runs: anagel@coastalbrokersins.com (special form required)',
+                notes: 'Claims: cblackmore@coastalbrokersins.com, Scottsdale direct: 800-423-7675'
+            },
+            'AmTrust': {
+                contact: 'Phone: 954-598-6527',
+                territory: 'Multi-state coverage (formerly Tower)',
+                specialties: 'Motor Carrier: motorcarrier@amtrustgroup.com',
+                underwriter: 'Loss Runs: towerloss.runs@amtrustgroup.com',
+                notes: 'Claims: We report, Lloyds assignments: assignments@ameririsk.com 405-216-8700'
+            },
+            'RPS': {
+                contact: 'Phone: 714-558-6141',
+                territory: 'California focus',
+                specialties: 'Argelia Aguilar: argelia_aguilar@rpsins.com, Griselda Donan: griselda_donan@rpsins.com',
+                underwriter: 'Hector Banos: hector_banos@rpsins.com',
+                notes: 'Claims: Scottsdale - sicreportaloss@scottsdaleins.com, 800-423-7675'
+            },
+            'Schuberg': {
+                contact: 'Phone: 800-382-3623, Fax: 805-446-6454',
+                territory: 'Multi-carrier platform',
+                specialties: 'Email: mailroom@schuberg.com',
+                underwriter: 'Main underwriting department',
+                notes: 'Claims: INSURED REPORTS - Multiple carriers: Harco 866-969-3899, Carolian 800-874-8053, Northland 800-328-5972, Scottsdale 800-423-7675'
+            },
+            'National General': {
+                contact: 'Phone: 877-468-3466, Agent Code: 9600388',
+                territory: 'National coverage',
+                specialties: 'Email: cnibapapps@ngic.com',
+                underwriter: 'National General underwriting',
+                notes: 'Claims: Insureds report to main number'
+            },
+            'Pacific Gateway': {
+                contact: 'Phone: 800-354-4844',
+                territory: 'West Coast operations',
+                specialties: 'Service: service@pgiainsurance.com, UW: kevin_gregg@pgiainsurance.com',
+                underwriter: 'Kevin Gregg, Anita Burk: 661-257-5977 ext 8100',
+                notes: 'Claims: We report - Redwood: bhhcclaim@bhhc.com 800-488-2930'
             }
         };
 
@@ -954,19 +1010,110 @@
 
         function displayCarrierInfo() {
             const container = document.getElementById('carrier-info-display');
-            container.innerHTML = Object.entries(carrierInfo).map(([carrier, info]) => `
-                <div class="insight-card" style="position: relative;">
-                    <div class="insight-carrier">${carrier}</div>
-                    <div class="insight-details">
-                        <strong>Contact:</strong> ${info.contact || 'Not specified'}<br>
-                        <strong>Territory:</strong> ${info.territory || 'Not specified'}<br>
-                        <strong>Specialties:</strong> ${info.specialties || 'Not specified'}<br>
-                        <strong>Underwriter:</strong> ${info.underwriter || 'Not specified'}<br>
-                        <strong>Notes:</strong> ${info.notes || 'None'}
+            
+            // Calculate actual performance from carrier attempts data
+            const carrierPerformance = {};
+            dashboardData.carrierAttempts.forEach(attempt => {
+                const carrier = attempt['Carrier Name'] || attempt.carrierName;
+                if (!carrier) return;
+                
+                if (!carrierPerformance[carrier]) {
+                    carrierPerformance[carrier] = { attempts: 0, quotes: 0, wins: 0 };
+                }
+                
+                carrierPerformance[carrier].attempts++;
+                
+                const quoted = (attempt['Quoted (Y/N)'] || '').toString().toUpperCase() === 'Y';
+                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y';
+                
+                if (quoted) {
+                    carrierPerformance[carrier].quotes++;
+                    if (won) {
+                        carrierPerformance[carrier].wins++;
+                    }
+                }
+            });
+            
+            // Get all carriers - both from directory and from actual attempts
+            const allCarriers = new Set([
+                ...Object.keys(carrierInfo),
+                ...Object.keys(carrierPerformance)
+            ]);
+            
+            container.innerHTML = Array.from(allCarriers).map(carrier => {
+                const info = carrierInfo[carrier] || {
+                    contact: 'Not in directory',
+                    territory: 'Not specified',
+                    specialties: 'Not specified', 
+                    underwriter: 'Not specified',
+                    notes: 'Auto-detected from submission data'
+                };
+                
+                const performance = carrierPerformance[carrier] || { attempts: 0, quotes: 0, wins: 0 };
+                const quoteRate = performance.attempts > 0 ? ((performance.quotes / performance.attempts) * 100).toFixed(0) : 0;
+                const winRate = performance.quotes > 0 ? ((performance.wins / performance.quotes) * 100).toFixed(0) : 0;
+                
+                // Performance indicator color
+                let performanceColor = '#6c757d'; // Gray for no data
+                if (performance.attempts > 0) {
+                    if (performance.quotes === 0) performanceColor = '#dc3545'; // Red for no quotes
+                    else if (quoteRate >= 50) performanceColor = '#28a745'; // Green for good performance
+                    else performanceColor = '#ffc107'; // Yellow for moderate performance
+                }
+                
+                // Different styling for carriers not in directory
+                const isInDirectory = carrierInfo[carrier];
+                const cardStyle = isInDirectory ? '' : 'border: 2px dashed #6c757d; opacity: 0.8;';
+                
+                return `
+                    <div class="insight-card" style="position: relative; ${cardStyle}">
+                        <div class="insight-carrier">
+                            ${carrier}
+                            ${!isInDirectory ? '<span style="font-size: 12px; color: #6c757d; font-weight: normal;"> (Auto-detected)</span>' : ''}
+                            <div style="float: right; display: flex; gap: 10px; font-size: 12px;">
+                                <span style="background: ${performanceColor}; color: white; padding: 2px 8px; border-radius: 12px;">
+                                    ${performance.attempts} attempts
+                                </span>
+                                <span style="background: #17a2b8; color: white; padding: 2px 8px; border-radius: 12px;">
+                                    ${quoteRate}% quote rate
+                                </span>
+                                ${performance.wins > 0 ? `<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 12px;">${performance.wins} wins</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="insight-details">
+                            <strong>Contact:</strong> ${info.contact}<br>
+                            <strong>Territory:</strong> ${info.territory}<br>
+                            <strong>Specialties:</strong> ${info.specialties}<br>
+                            <strong>Underwriter:</strong> ${info.underwriter}<br>
+                            <strong>Notes:</strong> ${info.notes}<br>
+                            <strong>Performance:</strong> 
+                            <span style="color: ${performanceColor}; font-weight: bold;">
+                                ${performance.attempts} submissions → ${performance.quotes} quotes → ${performance.wins} wins
+                                ${performance.attempts > 0 && performance.quotes === 0 ? ' (NO QUOTES YET)' : ''}
+                                ${performance.quotes > 0 && performance.wins === 0 ? ' (QUOTED BUT NOT BOUND)' : ''}
+                                ${performance.wins > 0 ? ` (${winRate}% close rate)` : ''}
+                            </span>
+                        </div>
+                        ${isInDirectory ? `<button onclick="deleteCarrier('${carrier}')" style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 3px; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>` : 
+                        `<button onclick="addToDirectory('${carrier}')" style="position: absolute; top: 5px; right: 5px; background: #28a745; color: white; border: none; border-radius: 3px; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">+</button>`}
                     </div>
-                    <button onclick="deleteCarrier('${carrier}')" style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 3px; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+        }
+
+        function addToDirectory(carrierName) {
+            if (!carrierInfo[carrierName]) {
+                carrierInfo[carrierName] = {
+                    contact: '',
+                    territory: '',
+                    specialties: '',
+                    underwriter: '',
+                    notes: ''
+                };
+                saveCarrierInfoToStorage();
+                displayCarrierInfo();
+                debugLog('Added carrier to directory:', carrierName);
+            }
         }
 
         function editCarrierInfo() {
@@ -1084,25 +1231,24 @@
         function updateMetrics() {
             const totalQuotes = dashboardData.quotes.length;
             
-            // Check for different possible status values
-            const boundQuotes = dashboardData.quotes.filter(q => {
-                const status = (q.Status || q.status || '').toString().toLowerCase();
-                return status.includes('bound') || 
-                       status.includes('quoted') ||
-                       status.includes('won') ||
-                       status.includes('complete');
+            // Count actual bound policies from carrier attempts (Won Y/N = Y)
+            const boundPolicies = dashboardData.carrierAttempts.filter(attempt => {
+                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y';
+                return won;
             }).length;
             
-            const successRate = totalQuotes > 0 ? ((boundQuotes / totalQuotes) * 100).toFixed(1) : 0;
+            // Count quotes provided by carriers (Quoted Y/N = Y)
+            const quotesProvided = dashboardData.carrierAttempts.filter(attempt => {
+                const quoted = (attempt['Quoted (Y/N)'] || '').toString().toUpperCase() === 'Y';
+                return quoted;
+            }).length;
             
-            // Find top carrier - check multiple possible field names
+            const bindRate = totalQuotes > 0 ? ((boundPolicies / totalQuotes) * 100).toFixed(1) : 0;
+            
+            // Find top carrier by actual wins
             const carrierWins = {};
             dashboardData.carrierAttempts.forEach(attempt => {
-                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y' || 
-                           (attempt['Won (Y/N)'] || '').toString().toLowerCase() === 'yes' || 
-                           (attempt.Won || '').toString().toUpperCase() === 'Y' || 
-                           (attempt.won || '').toString().toLowerCase() === 'yes';
-                           
+                const won = (attempt['Won (Y/N)'] || '').toString().toUpperCase() === 'Y';
                 const carrierName = attempt['Carrier Name'] || attempt.carrierName || attempt.carrier;
                 
                 if (won && carrierName) {
@@ -1114,11 +1260,11 @@
                 .sort((a, b) => b[1] - a[1])[0]?.[0] || 'No wins yet';
             
             document.getElementById('total-quotes').textContent = totalQuotes;
-            document.getElementById('bound-quotes').textContent = boundQuotes;
-            document.getElementById('success-rate').textContent = successRate + '%';
+            document.getElementById('bound-quotes').textContent = boundPolicies;
+            document.getElementById('success-rate').textContent = bindRate + '%';
             document.getElementById('top-carrier').textContent = topCarrier;
             
-            debugLog('Metrics updated:', { totalQuotes, boundQuotes, successRate, topCarrier });
+            debugLog('Metrics updated:', { totalQuotes, boundPolicies, quotesProvided, bindRate, topCarrier });
         }
 
         function populateFilters() {
