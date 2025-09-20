@@ -464,38 +464,23 @@
                 <h2 style="color: #2c3e50; margin-bottom: 20px;">Smart Carrier Routing</h2>
                 
                 <div class="carrier-insights">
-                    <h3 style="color: #27ae60; margin-bottom: 10px;">Key Carrier Information</h3>
-                    <div class="insights-grid">
-                        <div class="insight-card">
-                            <div class="insight-carrier">Progressive Commercial</div>
-                            <div class="insight-details">
-                                • CA dump trucks - AUTOMATIC first choice<br>
-                                • Agent codes: 36046 or 66929<br>
-                                • WON'T DO UIIA containers
-                            </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: #27ae60; margin: 0;">Carrier Directory & Underwriter Information</h3>
+                        <div>
+                            <button onclick="editCarrierInfo()" class="edit-btn" style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 6px; margin-right: 10px; cursor: pointer;">Edit Info</button>
+                            <button onclick="addNewCarrier()" class="edit-btn" style="background: #27ae60; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Add Carrier</button>
                         </div>
-                        <div class="insight-card">
-                            <div class="insight-carrier">Sentry Select</div>
-                            <div class="insight-details">
-                                • Payment: 800-742-5681<br>
-                                • Will do UIIA containers<br>
-                                • Avoids Long Beach/LA/NJ ports
-                            </div>
-                        </div>
-                        <div class="insight-card">
-                            <div class="insight-carrier">Bellingham</div>
-                            <div class="insight-details">
-                                • Nicole Direct: 360-922-5244<br>
-                                • 250+ mile radius capability<br>
-                                • Requires full docs package
-                            </div>
-                        </div>
-                        <div class="insight-card">
-                            <div class="insight-carrier">IAT Insurance</div>
-                            <div class="insight-details">
-                                • Fleet specialist (8+ trucks)<br>
-                                • Strong long haul appetite<br>
-                                • Multiple unit operations
+                    </div>
+                    <div id="carrier-info-display" class="insights-grid"></div>
+                    
+                    <!-- Edit Modal -->
+                    <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 80%; overflow-y: auto;">
+                            <h3 style="margin-bottom: 20px; color: #2c3e50;">Edit Carrier Information</h3>
+                            <div id="edit-form-container"></div>
+                            <div style="text-align: right; margin-top: 20px;">
+                                <button onclick="cancelEdit()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; margin-right: 10px; cursor: pointer;">Cancel</button>
+                                <button onclick="saveCarrierInfo()" style="background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Save Changes</button>
                             </div>
                         </div>
                     </div>
@@ -582,6 +567,38 @@
             lastUpdated: null
         };
 
+        // Carrier information storage
+        let carrierInfo = {
+            'Progressive Commercial': {
+                contact: 'Agent codes: 36046 or 66929',
+                territory: 'California dump trucks - AUTOMATIC first choice',
+                specialties: 'WON\'T DO UIIA containers',
+                underwriter: 'Ed Zahnle - Premier Producer',
+                notes: 'Best rates for CA dump trucks'
+            },
+            'Sentry Select': {
+                contact: 'Payment: 800-742-5681',
+                territory: 'National coverage',
+                specialties: 'Will do UIIA containers, Avoids Long Beach/LA/NJ ports',
+                underwriter: 'Regional underwriter',
+                notes: 'Good alternative for containers'
+            },
+            'Bellingham': {
+                contact: 'Nicole Direct: 360-922-5244',
+                territory: '250 mile radius and under market',
+                specialties: 'Regional specialist, Requires full docs package',
+                underwriter: 'Nicole - Direct contact',
+                notes: 'Local/regional focus only'
+            },
+            'IAT Insurance': {
+                contact: 'Fleet department',
+                territory: 'Multi-state coverage',
+                specialties: 'Fleet specialist (8+ trucks), Strong long haul appetite',
+                underwriter: 'Fleet underwriting team',
+                notes: 'Best for multiple unit operations'
+            }
+        };
+
         // Debug logging
         function debugLog(message, data = null) {
             console.log(message, data);
@@ -601,6 +618,7 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             debugLog('Page loaded, initializing...');
+            loadCarrierInfo(); // Load carrier information first
             loadData();
         });
 
@@ -758,6 +776,135 @@
             showStatus('error', 'Using sample data - unable to connect to Google Sheets');
             
             debugLog('Sample data loaded successfully');
+        }
+
+        // Carrier Information Management Functions
+        function loadCarrierInfo() {
+            // Load carrier info from localStorage if available
+            const saved = localStorage.getItem('edZahnleCarrierInfo');
+            if (saved) {
+                try {
+                    carrierInfo = JSON.parse(saved);
+                    debugLog('Loaded carrier info from localStorage');
+                } catch (e) {
+                    debugLog('Error loading saved carrier info, using defaults');
+                }
+            }
+            displayCarrierInfo();
+        }
+
+        function displayCarrierInfo() {
+            const container = document.getElementById('carrier-info-display');
+            container.innerHTML = Object.entries(carrierInfo).map(([carrier, info]) => `
+                <div class="insight-card" style="position: relative;">
+                    <div class="insight-carrier">${carrier}</div>
+                    <div class="insight-details">
+                        <strong>Contact:</strong> ${info.contact || 'Not specified'}<br>
+                        <strong>Territory:</strong> ${info.territory || 'Not specified'}<br>
+                        <strong>Specialties:</strong> ${info.specialties || 'Not specified'}<br>
+                        <strong>Underwriter:</strong> ${info.underwriter || 'Not specified'}<br>
+                        <strong>Notes:</strong> ${info.notes || 'None'}
+                    </div>
+                    <button onclick="deleteCarrier('${carrier}')" style="position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 3px; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                </div>
+            `).join('');
+        }
+
+        function editCarrierInfo() {
+            const modal = document.getElementById('edit-modal');
+            const container = document.getElementById('edit-form-container');
+            
+            container.innerHTML = Object.entries(carrierInfo).map(([carrier, info]) => `
+                <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px;">
+                    <h4 style="margin-bottom: 15px; color: #2c3e50;">${carrier}</h4>
+                    <div style="display: grid; gap: 10px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Contact Information:</label>
+                            <input type="text" id="contact_${carrier.replace(/\s+/g, '_')}" value="${info.contact || ''}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Territory/Coverage:</label>
+                            <input type="text" id="territory_${carrier.replace(/\s+/g, '_')}" value="${info.territory || ''}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Specialties/Restrictions:</label>
+                            <textarea id="specialties_${carrier.replace(/\s+/g, '_')}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; height: 60px;">${info.specialties || ''}</textarea>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Underwriter/Rep:</label>
+                            <input type="text" id="underwriter_${carrier.replace(/\s+/g, '_')}" value="${info.underwriter || ''}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Notes:</label>
+                            <textarea id="notes_${carrier.replace(/\s+/g, '_')}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; height: 60px;">${info.notes || ''}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            modal.style.display = 'block';
+        }
+
+        function addNewCarrier() {
+            const carrierName = prompt('Enter carrier name:');
+            if (carrierName && carrierName.trim()) {
+                const cleanName = carrierName.trim();
+                if (!carrierInfo[cleanName]) {
+                    carrierInfo[cleanName] = {
+                        contact: '',
+                        territory: '',
+                        specialties: '',
+                        underwriter: '',
+                        notes: ''
+                    };
+                    displayCarrierInfo();
+                    saveCarrierInfoToStorage();
+                    debugLog('Added new carrier:', cleanName);
+                } else {
+                    alert('Carrier already exists!');
+                }
+            }
+        }
+
+        function deleteCarrier(carrierName) {
+            if (confirm(`Delete ${carrierName} from the directory?`)) {
+                delete carrierInfo[carrierName];
+                displayCarrierInfo();
+                saveCarrierInfoToStorage();
+                debugLog('Deleted carrier:', carrierName);
+            }
+        }
+
+        function saveCarrierInfo() {
+            // Save all carrier information from the form
+            Object.keys(carrierInfo).forEach(carrier => {
+                const cleanCarrier = carrier.replace(/\s+/g, '_');
+                const contact = document.getElementById(`contact_${cleanCarrier}`);
+                const territory = document.getElementById(`territory_${cleanCarrier}`);
+                const specialties = document.getElementById(`specialties_${cleanCarrier}`);
+                const underwriter = document.getElementById(`underwriter_${cleanCarrier}`);
+                const notes = document.getElementById(`notes_${cleanCarrier}`);
+                
+                if (contact) carrierInfo[carrier].contact = contact.value;
+                if (territory) carrierInfo[carrier].territory = territory.value;
+                if (specialties) carrierInfo[carrier].specialties = specialties.value;
+                if (underwriter) carrierInfo[carrier].underwriter = underwriter.value;
+                if (notes) carrierInfo[carrier].notes = notes.value;
+            });
+            
+            saveCarrierInfoToStorage();
+            displayCarrierInfo();
+            cancelEdit();
+            debugLog('Carrier information saved');
+        }
+
+        function saveCarrierInfoToStorage() {
+            localStorage.setItem('edZahnleCarrierInfo', JSON.stringify(carrierInfo));
+        }
+
+        function cancelEdit() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
         }
 
         function showStatus(type, message) {
