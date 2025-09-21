@@ -816,19 +816,42 @@
 
         // Helper functions to handle different column name variations
         function getCarrierName(attempt) {
-            // Debug: log the attempt object to see field names
-            if (Object.keys(dashboardData.carrierAttempts).length > 0 && Math.random() < 0.01) {
-                debugLog('Sample carrier attempt object:', attempt);
-                debugLog('Available fields:', Object.keys(attempt));
+            // Try multiple possible field names and formats
+            const possibleFields = [
+                'Carrier Name', 'carrierName', 'carrier', 'Carrier', 
+                'B', 'Column B', 'col_b', 'Carrier_Name'
+            ];
+            
+            let carrierName = '';
+            
+            for (const field of possibleFields) {
+                if (attempt[field]) {
+                    carrierName = attempt[field];
+                    break;
+                }
             }
             
-            return attempt['Carrier Name'] || 
-                   attempt.carrierName || 
-                   attempt.carrier || 
-                   attempt.Carrier ||
-                   attempt['Carrier'] ||
-                   attempt['B'] ||  // Sometimes Google Sheets returns column letters
-                   '';
+            // Handle dropdown formatting - sometimes Google Sheets adds extra formatting
+            if (carrierName && typeof carrierName === 'object') {
+                // If it's an object, try to get the display value
+                carrierName = carrierName.displayValue || carrierName.value || carrierName.formattedValue || carrierName.toString();
+            }
+            
+            // Clean up the carrier name
+            if (carrierName) {
+                carrierName = carrierName.toString().trim();
+                
+                // Remove any dropdown formatting artifacts
+                carrierName = carrierName.replace(/^["']|["']$/g, ''); // Remove quotes
+                carrierName = carrierName.replace(/\s+/g, ' '); // Normalize whitespace
+            }
+            
+            // Debug: occasionally log what we found
+            if (Math.random() < 0.1 && carrierName) {
+                debugLog(`Carrier detected: "${carrierName}" from attempt:`, attempt);
+            }
+            
+            return carrierName || '';
         }
 
         // Helper function to get quote status
@@ -896,8 +919,25 @@
                     quotesLength: data && data.quotes ? data.quotes.length : 0,
                     hasCarrierAttempts: !!(data && data.carrierAttempts),
                     carrierAttemptsLength: data && data.carrierAttempts ? data.carrierAttempts.length : 0,
-                    hasError: !!(data && data.error)
+                    hasError: !!(data && data.error),
+                    sampleQuote: data && data.quotes && data.quotes[0] ? data.quotes[0] : null,
+                    sampleCarrierAttempt: data && data.carrierAttempts && data.carrierAttempts[0] ? data.carrierAttempts[0] : null,
+                    carrierAttemptFields: data && data.carrierAttempts && data.carrierAttempts[0] ? Object.keys(data.carrierAttempts[0]) : []
                 });
+                
+                // Log first few carrier attempts to see dropdown data structure
+                if (data && data.carrierAttempts && data.carrierAttempts.length > 0) {
+                    debugLog('First 3 carrier attempts with all fields:', data.carrierAttempts.slice(0, 3));
+                    
+                    // Check if any carrier names are being detected
+                    const detectedCarriers = data.carrierAttempts.map(attempt => ({
+                        rawAttempt: attempt,
+                        detectedCarrier: getCarrierName(attempt),
+                        allFields: Object.entries(attempt)
+                    })).slice(0, 5);
+                    
+                    debugLog('Carrier name detection test:', detectedCarriers);
+                }
                 
                 if (data && data.error) {
                     throw new Error(data.error);
@@ -1706,13 +1746,10 @@ Please review this submission and provide your best quote when possible. I look 
 
 Best regards,
 Ed Zahnle
-Licensed Insurance Agent - Progressive Premier Producer
+West Coast Trucking Insurance Specialist
 Network Trucking Insurance
 Phone: 800-266-8789
-Email: ed.zahnle@truckerinsurance.com
-
----
-Submitted to: ${selectedCarriers.join(', ')}`;
+Email: ed.zahnle@truckerinsurance.com`;
 
             // Create email modal
             showEmailModal(subject, emailBody, bccEmails, selectedCarriers);
